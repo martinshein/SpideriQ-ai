@@ -13,14 +13,35 @@
 3. Restart your IDE
 4. Authenticate: `npx @spideriq/cli auth request --email admin@company.com --registry https://npm.spideriq.ai`
 
-### Build a Site
+### Build a Site (follow ALL steps)
 ```
-template_get_help          → Read the full content reference
-content_create_page        → Create pages with blocks
-content_publish_page       → Publish pages
-template_apply_theme       → Apply "default" theme
-content_deploy_site        → Deploy to Cloudflare edge (2-5s)
+template_get_help          → 1. Read the full content reference
+content_update_settings    → 2. REQUIRED: Set site_name, primary_color, logo
+content_update_navigation  → 3. Set up header menu items
+content_create_page        → 4. Create pages with blocks (slug "home" for homepage)
+content_publish_page       → 5. REQUIRED: Publish at least 1 page
+template_apply_theme       → 6. REQUIRED: Apply "default" theme
+content_deploy_readiness   → 7. Check if site is ready to deploy
+content_deploy_site        → 8. Deploy to Cloudflare edge (2-5s)
 ```
+
+### Deploy Requirements
+
+Deploy **rejects** if any blocking item is missing. Always call `content_deploy_readiness` first.
+
+| Requirement | MCP Tool |
+|-------------|----------|
+| Site settings with `site_name` | `content_update_settings` |
+| At least 1 verified domain | `content_add_domain` |
+| At least 1 template (theme applied) | `template_apply_theme` |
+| At least 1 published page | `content_publish_page` |
+
+### Common Mistakes
+
+- **Component slug reuse** → 400 error. Use update or increment version.
+- **Deploying before publishing pages** → 400 "Missing: Published Pages"
+- **Skipping settings** → 400 "Missing: Site Settings"
+- **Skipping theme** → 400 "Missing: Theme / Templates"
 
 ### Block Types
 `hero`, `features_grid`, `cta_section`, `testimonials`, `pricing_table`, `faq`, `stats_bar`, `rich_text`, `image`, `video_embed`, `code_example`, `logo_cloud`, `comparison_table`, `spacer`, `component`

@@ -14,16 +14,39 @@ If not authenticated: `npx @spideriq/cli auth request --email admin@company.com 
 ## Build a Site
 
 1. **Read the reference first:** Use `template_get_help` MCP tool (or `GET /api/v1/content/help?format=yaml`)
-2. **Settings:** `PATCH /api/v1/dashboard/content/settings` — site_name, primary_color, logo
+2. **Settings:** `PATCH /api/v1/dashboard/content/settings` — REQUIRED: site_name, primary_color, logo
 3. **Navigation:** `PUT /api/v1/dashboard/content/navigation/header` — menu items
-4. **Pages:** `POST /api/v1/dashboard/content/pages` — create with blocks
-5. **Publish:** `POST /api/v1/dashboard/content/pages/{id}/publish`
-6. **Theme:** `POST /api/v1/dashboard/templates/apply-theme` — apply "default"
-7. **Deploy:** `POST /api/v1/dashboard/content/deploy` — live in ~2-5 seconds
+4. **Pages:** `POST /api/v1/dashboard/content/pages` — create with blocks (slug "home" for homepage)
+5. **Publish:** `POST /api/v1/dashboard/content/pages/{id}/publish` — REQUIRED: at least 1 published page
+6. **Theme:** `POST /api/v1/dashboard/templates/apply-theme` — REQUIRED: apply "default"
+7. **Check readiness:** Use `content_deploy_readiness` MCP tool — verify all checks pass
+8. **Deploy:** `POST /api/v1/dashboard/content/deploy` — live in ~2-5 seconds
+
+## Deploy Requirements (IMPORTANT)
+
+Deploy will **reject** your request if any of these are missing:
+- **Site settings** with `site_name` (step 2)
+- **At least 1 verified domain** (add via `content_add_domain`)
+- **At least 1 template** / theme applied (step 6)
+- **At least 1 published page** (step 5)
+
+**Always call `content_deploy_readiness` before deploying.** It returns a checklist showing what's configured and what's missing. Saves you from deploying a broken site.
+
+## Common Mistakes
+
+| Mistake | What Happens | Fix |
+|---------|-------------|-----|
+| Skip settings, go straight to deploy | 400: "Missing: Site Settings" | Set settings first (step 2) |
+| Create components with same slug twice | 400: "already exists" | Use `content_update_component` or increment version |
+| Create pages but forget to publish them | 400: "Missing: Published Pages" | Publish at least 1 page (step 5) |
+| Skip `apply-theme` | 400: "Missing: Theme / Templates" | Apply a theme (step 6) |
+| Deploy without adding a domain | 400: "Missing: Verified Domain" | Add domain via `content_add_domain` |
 
 ## Key Rules
 
 - **Always read `/content/help` first** — it has every block type, Liquid filter, and template variable
+- **Always check readiness before deploy** — `content_deploy_readiness` MCP tool
+- **Component slugs must be unique** per version — duplicates return 400
 - **Use `format=yaml`** on GET requests — saves 40-76% tokens
 - **Block types:** hero, features_grid, cta_section, testimonials, pricing_table, faq, stats_bar, rich_text, image, video_embed, code_example, logo_cloud, comparison_table, spacer, component
 - **Page templates:** default, landing, feature, legal, dynamic_landing
