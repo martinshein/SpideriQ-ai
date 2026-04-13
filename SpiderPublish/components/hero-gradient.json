@@ -1,0 +1,27 @@
+{
+  "_description": "Gradient hero component with Shadow DOM isolation. POST to /api/v1/dashboard/content/components",
+  "_docs": "https://docs.spideriq.ai/site-builder/agents#custom-components-shadow-dom",
+
+  "slug": "hero-gradient",
+  "name": "Gradient Hero",
+  "category": "hero",
+  "version": "1.0.0",
+  "html_template": "<section class=\"hero\">\n  <div class=\"content\">\n    <h1>{{ props.headline }}</h1>\n    {% if props.subheadline %}<p class=\"sub\">{{ props.subheadline }}</p>{% endif %}\n    {% if props.cta_text %}\n      <a href=\"{{ props.cta_url | default: '#' }}\" class=\"cta\">{{ props.cta_text }}</a>\n    {% endif %}\n  </div>\n</section>",
+  "css": ":host { display: block; }\n.hero { background: linear-gradient(135deg, var(--primary), #1a1a2e); padding: 5rem 2rem; text-align: center; min-height: 60vh; display: flex; align-items: center; justify-content: center; }\n.content { max-width: 800px; }\nh1 { font-size: 3rem; color: white; margin: 0 0 1rem; line-height: 1.1; }\n.sub { font-size: 1.25rem; color: rgba(255,255,255,0.8); margin: 0 0 2rem; }\n.cta { display: inline-block; padding: 0.875rem 2rem; background: white; color: #1a1a2e; font-weight: 700; border-radius: 8px; text-decoration: none; font-size: 1.1rem; transition: transform 0.2s; }\n.cta:hover { transform: translateY(-2px); }\n@media (max-width: 768px) { h1 { font-size: 2rem; } .hero { padding: 3rem 1.5rem; } }",
+  "props_schema": {
+    "type": "object",
+    "properties": {
+      "headline": { "type": "string", "title": "Headline", "default": "Your Headline Here" },
+      "subheadline": { "type": "string", "title": "Subheadline" },
+      "cta_text": { "type": "string", "title": "CTA Button Text" },
+      "cta_url": { "type": "string", "title": "CTA Button URL", "default": "#" }
+    },
+    "required": ["headline"]
+  },
+  "default_props": {
+    "headline": "Build Something Amazing",
+    "subheadline": "The platform that turns ideas into production.",
+    "cta_text": "Get Started",
+    "cta_url": "/pricing"
+  }
+}

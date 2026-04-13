@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "spideriq": {
+      "command": "npx",
+      "args": ["@spideriq/mcp", "--registry", "https://npm.spideriq.ai"],
+      "env": {
+        "SPIDERIQ_FORMAT": "yaml"
+      }
+    }
+  }
+}

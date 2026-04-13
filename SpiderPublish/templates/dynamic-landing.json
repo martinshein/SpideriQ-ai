@@ -1,0 +1,93 @@
+{
+  "_description": "Personalized landing page that shows each lead their own business data. Uses Google Place ID in the URL.",
+  "_docs": "https://docs.spideriq.ai/site-builder/tutorial-dynamic-landing",
+  "_url_pattern": "/lp/{slug}/{salesperson}/{google_place_id}",
+
+  "page": {
+    "_endpoint": "POST /api/v1/dashboard/content/pages",
+    "title": "Custom Proposal",
+    "slug": "proposal",
+    "template": "dynamic_landing",
+    "custom_fields": {
+      "headline": "A Custom Solution for {business}",
+      "subheadline": "We help businesses in {city} achieve better results.",
+      "intro_text": "Reached out to",
+      "intro_suffix": " — let's discuss how we can help!",
+      "cta_headline": "Ready to Transform {business}?",
+      "cta_text": "Let's discuss a custom solution for your business.",
+      "cta_button": "Book a Discovery Call"
+    },
+    "blocks": [
+      {
+        "id": "features-1",
+        "type": "features_grid",
+        "data": {
+          "headline": "Why Choose Us for {business}?",
+          "features": [
+            { "title": "Benefit One", "description": "How this helps their specific business type.", "icon": "check" },
+            { "title": "Benefit Two", "description": "Address their likely pain point.", "icon": "chart" },
+            { "title": "Benefit Three", "description": "Competitive advantage specific to their market.", "icon": "shield" }
+          ]
+        }
+      },
+      {
+        "id": "faq-1",
+        "type": "faq",
+        "data": {
+          "items": [
+            { "question": "How long does it take to set up at {business}?", "answer": "Typically 2-3 weeks from contract to go-live." },
+            { "question": "Can you integrate with our existing systems?", "answer": "Yes, we integrate with most major platforms." },
+            { "question": "What kind of support do you provide?", "answer": "24/7 technical support with average 15-minute response time." }
+          ]
+        }
+      }
+    ]
+  },
+
+  "salespersons": {
+    "_endpoint": "PATCH /api/v1/dashboard/templates/config",
+    "_note": "Add this to the 'salespersons' field of your template config",
+    "alex": {
+      "name": "Alex Chen",
+      "title": "Account Executive",
+      "location": "San Francisco, CA",
+      "bio": "10 years in enterprise sales. Specializes in your industry.",
+      "photo_url": "https://media.cdn.spideriq.ai/team/alex.webp",
+      "calendar_url": "https://calendly.com/alex-chen"
+    },
+    "maria": {
+      "name": "Maria Santos",
+      "title": "Sales Director",
+      "location": "London, UK",
+      "bio": "Covers EMEA region. Deep experience in European markets.",
+      "photo_url": "https://media.cdn.spideriq.ai/team/maria.webp",
+      "calendar_url": "https://calendly.com/maria-santos"
+    }
+  },
+
+  "_template_variables": {
+    "lead.name": "Business name (from Google Maps via IDAP)",
+    "lead.city": "City name",
+    "lead.country_code": "2-letter country code",
+    "lead.rating": "Google Maps rating (1-5)",
+    "lead.reviews_count": "Number of Google reviews",
+    "lead.phone_e164": "Phone number in E.164 format",
+    "lead.domain": "Business website domain",
+    "lead.related.emails": "Array of verified emails",
+    "salesperson.name": "Matched from URL slug",
+    "salesperson.title": "Job title",
+    "salesperson.calendar_url": "Booking link"
+  },
+
+  "_example_urls": [
+    "https://yoursite.com/lp/proposal/alex/0x47e66fdad6f1cc73:0x341211b3fccd79e1",
+    "https://yoursite.com/lp/proposal/maria/0x47e66fdad6f1cc73:0x341211b3fccd79e1"
+  ],
+
+  "_after_creating": [
+    "POST /api/v1/dashboard/content/pages/{page-id}/publish",
+    "PATCH /api/v1/dashboard/templates/config { \"salespersons\": { ... } }",
+    "POST /api/v1/dashboard/templates/apply-theme { \"theme\": \"default\" }",
+    "POST /api/v1/dashboard/content/deploy"
+  ]
+}

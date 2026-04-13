@@ -1,0 +1,63 @@
+{
+  "_description": "3-tier pricing cards with Shadow DOM isolation. POST to /api/v1/dashboard/content/components",
+
+  "slug": "pricing-cards",
+  "name": "Pricing Cards",
+  "category": "pricing",
+  "version": "1.0.0",
+  "html_template": "<section class=\"pricing\">\n  {% if props.headline %}<h2>{{ props.headline }}</h2>{% endif %}\n  <div class=\"grid\">\n    {% for tier in props.tiers %}\n    <div class=\"card {% if tier.featured %}featured{% endif %}\">\n      {% if tier.featured %}<span class=\"badge\">Most Popular</span>{% endif %}\n      <h3>{{ tier.name }}</h3>\n      <div class=\"price\">${{ tier.price }}<span>/{{ tier.period | default: 'mo' }}</span></div>\n      <ul>\n        {% for feature in tier.features %}<li>{{ feature }}</li>{% endfor %}\n      </ul>\n      <a href=\"{{ tier.cta_url | default: '#' }}\" class=\"btn {% if tier.featured %}btn-primary{% endif %}\">{{ tier.cta_text | default: 'Get Started' }}</a>\n    </div>\n    {% endfor %}\n  </div>\n</section>",
+  "css": ":host { display: block; }\n.pricing { padding: 4rem 2rem; text-align: center; }\nh2 { font-size: 2rem; color: white; margin: 0 0 3rem; }\n.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; max-width: 1000px; margin: 0 auto; }\n.card { background: #1f1f23; border: 1px solid #2a2a2e; border-radius: 12px; padding: 2rem; position: relative; }\n.card.featured { border-color: var(--primary); }\n.badge { position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: var(--primary); color: #111; font-size: 0.75rem; font-weight: 700; padding: 0.25rem 1rem; border-radius: 20px; }\nh3 { font-size: 1.25rem; color: white; margin: 0 0 0.5rem; }\n.price { font-size: 2.5rem; font-weight: 800; color: white; margin: 0.5rem 0 1.5rem; }\n.price span { font-size: 1rem; font-weight: 400; color: #8b8b90; }\nul { list-style: none; padding: 0; margin: 0 0 2rem; }\nli { padding: 0.5rem 0; color: #adadb0; border-bottom: 1px solid #2a2a2e; font-size: 0.9rem; }\nli:last-child { border: none; }\n.btn { display: block; padding: 0.75rem; background: #2a2a2e; color: white; border-radius: 8px; text-decoration: none; font-weight: 600; transition: background 0.2s; }\n.btn:hover { background: #3a3a3e; }\n.btn-primary { background: var(--primary); color: #111; }\n.btn-primary:hover { opacity: 0.9; }",
+  "props_schema": {
+    "type": "object",
+    "properties": {
+      "headline": { "type": "string", "title": "Section Headline" },
+      "tiers": {
+        "type": "array",
+        "title": "Pricing Tiers",
+        "items": {
+          "type": "object",
+          "properties": {
+            "name": { "type": "string" },
+            "price": { "type": "number" },
+            "period": { "type": "string", "default": "mo" },
+            "features": { "type": "array", "items": { "type": "string" } },
+            "cta_text": { "type": "string" },
+            "cta_url": { "type": "string" },
+            "featured": { "type": "boolean", "default": false }
+          }
+        }
+      }
+    },
+    "required": ["tiers"]
+  },
+  "default_props": {
+    "headline": "Simple, Transparent Pricing",
+    "tiers": [
+      {
+        "name": "Starter",
+        "price": 29,
+        "period": "mo",
+        "features": ["5 projects", "1 GB storage", "Email support"],
+        "cta_text": "Start Free",
+        "cta_url": "/signup?plan=starter"
+      },
+      {
+        "name": "Pro",
+        "price": 79,
+        "period": "mo",
+        "features": ["Unlimited projects", "10 GB storage", "Priority support", "API access"],
+        "cta_text": "Start Free",
+        "cta_url": "/signup?plan=pro",
+        "featured": true
+      },
+      {
+        "name": "Enterprise",
+        "price": 199,
+        "period": "mo",
+        "features": ["Everything in Pro", "100 GB storage", "Dedicated support", "Custom domain", "SSO"],
+        "cta_text": "Contact Sales",
+        "cta_url": "/contact"
+      }
+    ]
+  }
+}

@@ -1,0 +1,92 @@
+{
+  "_description": "Complete blog setup: author + tags + 2 sample posts. Submit each section to its respective endpoint.",
+  "_docs": "https://docs.spideriq.ai/site-builder/tutorial-blog",
+
+  "author": {
+    "_endpoint": "POST /api/v1/dashboard/content/authors",
+    "name": "Your Name",
+    "slug": "your-name",
+    "bio": "A short bio. What do you write about? What's your expertise?",
+    "role": "author",
+    "agent_type": "human",
+    "avatar_url": "",
+    "social_links": {
+      "twitter": "",
+      "linkedin": ""
+    }
+  },
+
+  "tags": {
+    "_endpoint": "POST /api/v1/dashboard/content/tags (one per tag)",
+    "items": [
+      { "name": "Product Updates", "slug": "product-updates" },
+      { "name": "Engineering", "slug": "engineering" },
+      { "name": "Guides", "slug": "guides" }
+    ]
+  },
+
+  "posts": {
+    "_endpoint": "POST /api/v1/dashboard/content/posts",
+    "items": [
+      {
+        "title": "Your First Blog Post Title",
+        "slug": "first-post",
+        "excerpt": "A 1-2 sentence summary that appears in blog listings and social shares.",
+        "cover_image_url": "",
+        "author_id": "<author-uuid-from-above>",
+        "tags": ["product-updates"],
+        "is_featured": true,
+        "body": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                { "type": "text", "text": "Write your post content here. This uses Tiptap JSON format." }
+              ]
+            },
+            {
+              "type": "heading",
+              "attrs": { "level": 2 },
+              "content": [
+                { "type": "text", "text": "Section Heading" }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                { "type": "text", "text": "More content. Use headings, lists, bold, italic, links, and code blocks." }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "title": "Your Second Blog Post",
+        "slug": "second-post",
+        "excerpt": "Another compelling summary.",
+        "cover_image_url": "",
+        "author_id": "<author-uuid>",
+        "tags": ["engineering"],
+        "body": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                { "type": "text", "text": "Content for your second post." }
+              ]
+            }
+          ]
+        }
+      }
+    ]
+  },
+
+  "_after_creating": [
+    "POST /api/v1/dashboard/content/posts/{post-1-id}/publish",
+    "POST /api/v1/dashboard/content/posts/{post-2-id}/publish",
+    "POST /api/v1/dashboard/templates/apply-theme { \"theme\": \"default\" }",
+    "POST /api/v1/dashboard/content/deploy"
+  ]
+}

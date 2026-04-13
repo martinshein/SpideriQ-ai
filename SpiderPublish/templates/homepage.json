@@ -1,0 +1,71 @@
+{
+  "_description": "Ready-to-submit homepage payload. POST to /api/v1/dashboard/content/pages",
+  "_docs": "https://docs.spideriq.ai/site-builder/tutorial-homepage",
+
+  "title": "Home",
+  "slug": "home",
+  "template": "landing",
+  "seo_title": "Your Company — One-line value proposition",
+  "seo_description": "A compelling 150-character description of what your company does and why visitors should care.",
+  "blocks": [
+    {
+      "id": "hero-1",
+      "type": "hero",
+      "data": {
+        "headline": "Your Main Headline Here",
+        "subheadline": "A supporting sentence that explains what you do and who you serve.",
+        "cta_text": "Get Started",
+        "cta_url": "/pricing",
+        "background_image_url": ""
+      }
+    },
+    {
+      "id": "stats-1",
+      "type": "stats_bar",
+      "data": {
+        "stats": [
+          { "value": "10,000+", "label": "Customers" },
+          { "value": "99.9%", "label": "Uptime" },
+          { "value": "4.9/5", "label": "Rating" }
+        ]
+      }
+    },
+    {
+      "id": "features-1",
+      "type": "features_grid",
+      "data": {
+        "headline": "Why Choose Us",
+        "features": [
+          { "title": "Feature One", "description": "Explain the benefit, not just the feature.", "icon": "zap" },
+          { "title": "Feature Two", "description": "Focus on the outcome for the customer.", "icon": "shield" },
+          { "title": "Feature Three", "description": "Use specific numbers when possible.", "icon": "chart" },
+          { "title": "Feature Four", "description": "Address a pain point they have today.", "icon": "clock" }
+        ]
+      }
+    },
+    {
+      "id": "testimonials-1",
+      "type": "testimonials",
+      "data": {
+        "testimonials": [
+          {
+            "quote": "Replace with a real customer quote. Specific results work best.",
+            "author": "Customer Name",
+            "role": "Title",
+            "company": "Company"
+          }
+        ]
+      }
+    },
+    {
+      "id": "cta-1",
+      "type": "cta_section",
+      "data": {
+        "headline": "Ready to Get Started?",
+        "description": "Repeat your value proposition. Make it easy to say yes.",
+        "cta_text": "Start Free Trial",
+        "cta_url": "/pricing"
+      }
+    }
+  ]
+}
