@@ -27,9 +27,52 @@ If not authenticated: `npx @spideriq/cli auth request --email admin@company.com 
 - **Use `format=yaml`** on GET requests — saves 40-76% tokens
 - **Block types:** hero, features_grid, cta_section, testimonials, pricing_table, faq, stats_bar, rich_text, image, video_embed, code_example, logo_cloud, comparison_table, spacer, component
 - **Page templates:** default, landing, feature, legal, dynamic_landing
-- **Components use Shadow DOM** — CSS is automatically isolated, use `var(--primary)` for theme colors, never Tailwind
 - **Public endpoints** (GET /content/*) need no auth — use `X-Content-Domain` header
 - **Dashboard endpoints** (POST/PATCH /dashboard/content/*) need Bearer auth
+
+## Components (Shadow DOM — 4 Tiers)
+
+Reusable UI blocks with automatic CSS isolation. Tier is auto-detected from fields:
+
+| Tier | Name | Fields | Best For |
+|------|------|--------|----------|
+| 1 | Static | `html_template` + `css` | Heroes, footers, content |
+| 2 | Interactive | + `js` | Accordions, tabs, counters |
+| 3 | Rich | + `dependencies` | GSAP animations, carousels, charts |
+| 4 | App | + `framework` + `source_code` | React/Vue/Svelte apps |
+
+### Component Rules
+- **CSS is isolated** via Shadow DOM — no leaks, no Tailwind, write plain CSS in `css` field
+- **Use `var(--primary)`** for theme colors — auto-injected into every component
+- **JS scoping (Tier 2+):** `root.querySelector()` only, never `document.querySelector()`. `root` is the shadowRoot, `props` is the merged props object
+- **CDN libraries (Tier 3):** set `dependencies` array with allowlist keys. Check `GET /content/cdn-allowlist` for available libraries (gsap, chartjs, swiper, lottie, etc.)
+- **Framework (Tier 4):** set `framework` (react/vue/svelte) + `source_code`. Publish returns 202 (async build). Poll `build-status` endpoint
+- **Props:** define `props_schema` (JSON Schema) + `default_props`. Block props override defaults
+- **Status flow:** draft → published → archived. Only published components render on live pages
+
+### Component API
+```
+POST   /dashboard/content/components           — create
+PATCH  /dashboard/content/components/{id}      — update
+POST   /dashboard/content/components/{id}/publish  — publish (202 for Tier 4)
+GET    /dashboard/content/components/{id}/build-status  — Tier 4 build status
+POST   /dashboard/content/components/{id}/rebuild       — Tier 4 re-build
+GET    /content/components                     — list published (public)
+GET    /content/cdn-allowlist                  — list CDN libraries (public)
+```
+
+### Using Components in Pages
+```json
+{ "type": "component", "component_slug": "hero-gradient", "component_version": "1.0.0", "props": { "headline": "Welcome" } }
+```
+
+### Component Examples
+Ready-to-POST JSON payloads in `components/`:
+- `hero-gradient.json` — Tier 1: gradient hero with CTA
+- `pricing-cards.json` — Tier 1: 3-tier pricing cards
+- `faq-accordion.json` — Tier 2: interactive accordion with scoped JS
+- `stats-animated.json` — Tier 3: GSAP ScrollTrigger animated counters
+- `pricing-toggle.json` — Tier 4: React monthly/annual pricing toggle
 
 ## Dynamic Landing Pages
 
@@ -72,6 +115,9 @@ Submit any template: read the JSON, then `POST /api/v1/dashboard/content/pages` 
 - Production: `https://spideriq.ai/api/v1`
 - Docs: `https://docs.spideriq.ai`
 - Site Builder Docs: `https://docs.spideriq.ai/site-builder/overview`
+- Component Builder: `https://docs.spideriq.ai/site-builder/component-builder`
+- Component Tiers: `https://docs.spideriq.ai/site-builder/component-tiers`
+- Agent Reference: `https://docs.spideriq.ai/site-builder/component-agents-reference`
 - Health: `GET /api/v1/system/health`
 - Full Reference: `GET /api/v1/content/help` (~2,867 tokens YAML)
 

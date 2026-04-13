@@ -1,6 +1,7 @@
 {
-  "_description": "Gradient hero component with Shadow DOM isolation. POST to /api/v1/dashboard/content/components",
-  "_docs": "https://docs.spideriq.ai/site-builder/agents#custom-components-shadow-dom",
+  "_description": "Tier 1: Gradient hero component with Shadow DOM isolation. POST to /api/v1/dashboard/content/components",
+  "_tier": 1,
+  "_docs": "https://docs.spideriq.ai/site-builder/component-builder#quick-start-static-component-tier-1",
 
   "slug": "hero-gradient",
   "name": "Gradient Hero",

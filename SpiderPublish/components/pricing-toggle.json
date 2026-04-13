@@ -1,0 +1,67 @@
+{
+  "_description": "Tier 4: React pricing toggle with monthly/annual switch. POST to /api/v1/dashboard/content/components",
+  "_tier": 4,
+  "_docs": "https://docs.spideriq.ai/site-builder/component-builder#framework-components-tier-4",
+  "_note": "Publish returns 202 (async build). Poll GET .../build-status until 'success' before using in a page.",
+
+  "slug": "pricing-toggle",
+  "name": "Pricing Toggle",
+  "category": "pricing",
+  "version": "1.0.0",
+  "framework": "react",
+  "source_code": "import React, { useState } from 'react';\n\nexport default function PricingToggle({ headline, description, plans, annual_discount }) {\n  const [annual, setAnnual] = useState(false);\n  const discount = annual_discount || 20;\n\n  return (\n    <section style={{ padding: '4rem 2rem', textAlign: 'center', fontFamily: 'var(--font-body, system-ui, sans-serif)' }}>\n      {headline && <h2 style={{ fontSize: '2rem', color: 'white', margin: '0 0 0.5rem' }}>{headline}</h2>}\n      {description && <p style={{ color: '#adadb0', margin: '0 0 2rem', fontSize: '1.1rem' }}>{description}</p>}\n\n      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.75rem', marginBottom: '2.5rem', background: '#1f1f23', padding: '0.25rem', borderRadius: '2rem' }}>\n        <button\n          onClick={() => setAnnual(false)}\n          style={{\n            padding: '0.5rem 1.5rem', borderRadius: '2rem', border: 'none', cursor: 'pointer',\n            background: !annual ? 'var(--primary, #2563eb)' : 'transparent',\n            color: !annual ? '#111' : '#adadb0', fontWeight: 600, fontSize: '0.9rem',\n          }}\n        >Monthly</button>\n        <button\n          onClick={() => setAnnual(true)}\n          style={{\n            padding: '0.5rem 1.5rem', borderRadius: '2rem', border: 'none', cursor: 'pointer',\n            background: annual ? 'var(--primary, #2563eb)' : 'transparent',\n            color: annual ? '#111' : '#adadb0', fontWeight: 600, fontSize: '0.9rem',\n          }}\n        >Annual <span style={{ fontSize: '0.75rem', opacity: 0.8 }}>(-{discount}%)</span></button>\n      </div>\n\n      <div style={{ display: 'flex', gap: '1.5rem', justifyContent: 'center', flexWrap: 'wrap', maxWidth: '1000px', margin: '0 auto' }}>\n        {(plans || []).map((plan, i) => {\n          const price = annual ? Math.round(plan.price * (1 - discount / 100)) : plan.price;\n          return (\n            <div key={i} style={{\n              background: '#1f1f23', border: plan.featured ? '2px solid var(--primary, #2563eb)' : '1px solid #2a2a2e',\n              borderRadius: '12px', padding: '2rem', minWidth: '280px', flex: '1', maxWidth: '320px', position: 'relative',\n            }}>\n              {plan.featured && (\n                <span style={{\n                  position: 'absolute', top: '-12px', left: '50%', transform: 'translateX(-50%)',\n                  background: 'var(--primary, #2563eb)', color: '#111', fontSize: '0.75rem',\n                  fontWeight: 700, padding: '0.25rem 1rem', borderRadius: '20px',\n                }}>Most Popular</span>\n              )}\n              <h3 style={{ color: 'white', margin: '0 0 0.5rem', fontSize: '1.25rem' }}>{plan.name}</h3>\n              <div style={{ margin: '0.5rem 0 1.5rem' }}>\n                <span style={{ fontSize: '2.5rem', fontWeight: 800, color: 'white' }}>${price}</span>\n                <span style={{ color: '#8b8b90', fontSize: '1rem' }}>/mo</span>\n              </div>\n              <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 2rem' }}>\n                {(plan.features || []).map((f, j) => (\n                  <li key={j} style={{ padding: '0.5rem 0', color: '#adadb0', borderBottom: '1px solid #2a2a2e', fontSize: '0.9rem' }}>{f}</li>\n                ))}\n              </ul>\n              <a href={plan.cta_url || '#'} style={{\n                display: 'block', padding: '0.75rem', borderRadius: '8px', textDecoration: 'none', fontWeight: 600, textAlign: 'center',\n                background: plan.featured ? 'var(--primary, #2563eb)' : '#2a2a2e',\n                color: plan.featured ? '#111' : 'white',\n              }}>{plan.cta_text || 'Get Started'}</a>\n            </div>\n          );\n        })}\n      </div>\n    </section>\n  );\n}",
+  "props_schema": {
+    "type": "object",
+    "properties": {
+      "headline": { "type": "string", "title": "Section Headline" },
+      "description": { "type": "string", "title": "Section Description" },
+      "annual_discount": { "type": "integer", "title": "Annual Discount %", "minimum": 1, "maximum": 50, "default": 20 },
+      "plans": {
+        "type": "array",
+        "title": "Pricing Plans",
+        "items": {
+          "type": "object",
+          "properties": {
+            "name": { "type": "string", "title": "Plan Name" },
+            "price": { "type": "number", "title": "Monthly Price ($)" },
+            "features": { "type": "array", "items": { "type": "string" }, "title": "Feature List" },
+            "cta_text": { "type": "string", "title": "Button Text" },
+            "cta_url": { "type": "string", "title": "Button URL" },
+            "featured": { "type": "boolean", "title": "Highlight This Plan", "default": false }
+          },
+          "required": ["name", "price"]
+        }
+      }
+    },
+    "required": ["plans"]
+  },
+  "default_props": {
+    "headline": "Simple, Transparent Pricing",
+    "description": "Start free. Upgrade when you're ready.",
+    "annual_discount": 20,
+    "plans": [
+      {
+        "name": "Starter",
+        "price": 29,
+        "features": ["5 projects", "1 GB storage", "Email support"],
+        "cta_text": "Start Free",
+        "cta_url": "/signup?plan=starter"
+      },
+      {
+        "name": "Pro",
+        "price": 79,
+        "features": ["Unlimited projects", "10 GB storage", "Priority support", "API access"],
+        "cta_text": "Start Free",
+        "cta_url": "/signup?plan=pro",
+        "featured": true
+      },
+      {
+        "name": "Enterprise",
+        "price": 199,
+        "features": ["Everything in Pro", "100 GB storage", "Dedicated support", "Custom domain", "SSO"],
+        "cta_text": "Contact Sales",
+        "cta_url": "/contact"
+      }
+    ]
+  }
+}

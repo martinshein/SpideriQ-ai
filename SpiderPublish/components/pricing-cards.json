@@ -1,5 +1,7 @@
 {
-  "_description": "3-tier pricing cards with Shadow DOM isolation. POST to /api/v1/dashboard/content/components",
+  "_description": "Tier 1: 3-tier pricing cards with Shadow DOM isolation. POST to /api/v1/dashboard/content/components",
+  "_tier": 1,
+  "_docs": "https://docs.spideriq.ai/site-builder/component-builder#quick-start-static-component-tier-1",
 
   "slug": "pricing-cards",
   "name": "Pricing Cards",

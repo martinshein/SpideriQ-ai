@@ -1,0 +1,45 @@
+{
+  "_description": "Tier 3: Animated stats bar with GSAP ScrollTrigger. POST to /api/v1/dashboard/content/components",
+  "_tier": 3,
+  "_docs": "https://docs.spideriq.ai/site-builder/component-builder#using-cdn-libraries-tier-3",
+
+  "slug": "stats-animated",
+  "name": "Animated Stats Bar",
+  "category": "stats",
+  "version": "1.0.0",
+  "dependencies": ["gsap", "gsap/ScrollTrigger"],
+  "html_template": "<section class=\"stats\">\n  {% if props.headline %}<h2>{{ props.headline }}</h2>{% endif %}\n  <div class=\"grid\">\n    {% for stat in props.stats %}\n    <div class=\"stat\">\n      {% if stat.prefix %}<span class=\"prefix\">{{ stat.prefix }}</span>{% endif %}\n      <span class=\"value\" data-target=\"{{ stat.value }}\">0</span>\n      {% if stat.suffix %}<span class=\"suffix\">{{ stat.suffix }}</span>{% endif %}\n      <span class=\"label\">{{ stat.label }}</span>\n    </div>\n    {% endfor %}\n  </div>\n</section>",
+  "css": ":host { display: block; }\n.stats { padding: 4rem 2rem; text-align: center; }\nh2 { font-size: 2rem; color: white; margin: 0 0 3rem; }\n.grid { display: flex; justify-content: center; gap: 4rem; flex-wrap: wrap; }\n.stat { min-width: 120px; }\n.value { font-size: 3.5rem; font-weight: 800; color: var(--primary); display: block; line-height: 1; }\n.prefix, .suffix { font-size: 2rem; font-weight: 700; color: var(--primary); }\n.label { display: block; margin-top: 0.5rem; font-size: 0.875rem; color: #adadb0; text-transform: uppercase; letter-spacing: 0.08em; }",
+  "js": "gsap.registerPlugin(ScrollTrigger);\nroot.querySelectorAll('.value').forEach(el => {\n  const target = parseInt(el.dataset.target, 10);\n  gsap.fromTo(el,\n    { textContent: 0 },\n    {\n      textContent: target,\n      duration: 2,\n      ease: 'power2.out',\n      snap: { textContent: 1 },\n      scrollTrigger: {\n        trigger: el,\n        start: 'top 85%',\n        once: true\n      }\n    }\n  );\n});",
+  "props_schema": {
+    "type": "object",
+    "properties": {
+      "headline": { "type": "string", "title": "Section Headline" },
+      "stats": {
+        "type": "array",
+        "title": "Statistics",
+        "items": {
+          "type": "object",
+          "properties": {
+            "value": { "type": "integer", "title": "Number" },
+            "label": { "type": "string", "title": "Label" },
+            "prefix": { "type": "string", "title": "Prefix (e.g. $)" },
+            "suffix": { "type": "string", "title": "Suffix (e.g. +, %, K)" }
+          },
+          "required": ["value", "label"]
+        },
+        "minItems": 1,
+        "maxItems": 6
+      }
+    },
+    "required": ["stats"]
+  },
+  "default_props": {
+    "stats": [
+      { "value": 500, "suffix": "+", "label": "Clients" },
+      { "value": 99, "suffix": "%", "label": "Uptime" },
+      { "value": 24, "label": "Countries" },
+      { "value": 10, "suffix": "M", "label": "Requests / Day" }
+    ]
+  }
+}

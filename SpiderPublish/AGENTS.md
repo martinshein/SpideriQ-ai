@@ -1,6 +1,9 @@
 # SpiderPublish — AGENTS.md
 
 > Full version: [docs.spideriq.ai/site-builder/agents](https://docs.spideriq.ai/site-builder/agents)
+> Component Builder: [docs.spideriq.ai/site-builder/component-builder](https://docs.spideriq.ai/site-builder/component-builder)
+> Tiers Reference: [docs.spideriq.ai/site-builder/component-tiers](https://docs.spideriq.ai/site-builder/component-tiers)
+> Agent Reference: [docs.spideriq.ai/site-builder/component-agents-reference](https://docs.spideriq.ai/site-builder/component-agents-reference)
 
 ## Quick Reference
 
@@ -41,6 +44,61 @@ GET /api/v1/idap/businesses?limit=20&include=emails&format=yaml
 GET /api/v1/idap/businesses/resolve?place_id=0x47e66fdad6f1cc73:0x341211b3fccd79e1
 ```
 
+---
+
+## Components (Shadow DOM — 4 Tiers)
+
+Reusable UI blocks with automatic CSS isolation. The tier is detected from which fields are present:
+
+| Tier | Name | What to Set | Best For |
+|------|------|-------------|----------|
+| 1 | Static | `html_template` + `css` | Heroes, footers, content sections |
+| 2 | Interactive | + `js` | Accordions, tabs, counters, toggles |
+| 3 | Rich | + `dependencies` | GSAP animations, carousels, charts |
+| 4 | App | + `framework` + `source_code` | React/Vue/Svelte apps |
+
+### Create a Component
+```bash
+POST /api/v1/dashboard/content/components
+{ "slug": "hero-gradient", "name": "Gradient Hero", "category": "hero",
+  "html_template": "<section><h1>{{ props.headline }}</h1></section>",
+  "css": "section { background: linear-gradient(135deg, var(--primary), #000); padding: 5rem 2rem; color: white; }",
+  "props_schema": { "type": "object", "properties": { "headline": { "type": "string" } }, "required": ["headline"] } }
+```
+
+### Add JavaScript (Tier 2)
+```json
+{ "js": "root.querySelector('button').addEventListener('click', () => { /* ... */ });" }
+```
+JS receives `root` (shadowRoot) and `props`. Use `root.querySelector()`, never `document.querySelector()`.
+
+### Add CDN Libraries (Tier 3)
+```json
+{ "dependencies": ["gsap", "gsap/ScrollTrigger"], "js": "gsap.registerPlugin(ScrollTrigger); /* ... */" }
+```
+Available: `gsap`, `gsap/ScrollTrigger`, `gsap/Flip`, `animejs`, `alpinejs`, `chartjs`, `lottie`, `swiper`, `countup`, `three`. Check `GET /content/cdn-allowlist`.
+
+### Framework Components (Tier 4)
+```json
+{ "framework": "react", "source_code": "import React from 'react';\nexport default function App(props) { return <h1>{props.headline}</h1>; }" }
+```
+Publish returns 202 (async build). Poll `GET .../build-status` until `success`.
+
+### Use in Pages
+```json
+{ "type": "component", "component_slug": "hero-gradient", "props": { "headline": "Welcome" } }
+```
+
+### Component Examples
+Ready-to-POST examples in `components/`:
+- `hero-gradient.json` — Tier 1: gradient hero
+- `pricing-cards.json` — Tier 1: 3-tier pricing
+- `faq-accordion.json` — Tier 2: interactive FAQ accordion
+- `stats-animated.json` — Tier 3: GSAP animated stats counter
+- `pricing-toggle.json` — Tier 4: React pricing with monthly/annual toggle
+
+---
+
 ### Rate Limits
 - API: 100 requests/minute
 - Jobs: 10 submissions/minute
@@ -53,6 +111,9 @@ GET /api/v1/idap/businesses/resolve?place_id=0x47e66fdad6f1cc73:0x341211b3fccd79
 
 ## Full Documentation
 - [AI Agent Guide](https://docs.spideriq.ai/site-builder/agents)
+- [Component Builder Guide](https://docs.spideriq.ai/site-builder/component-builder)
+- [Component Tiers Reference](https://docs.spideriq.ai/site-builder/component-tiers)
+- [Component Agent Reference](https://docs.spideriq.ai/site-builder/component-agents-reference)
 - [Gotchas & Best Practices](https://docs.spideriq.ai/site-builder/learnings)
 - [Deploy Guide](https://docs.spideriq.ai/site-builder/deployment)
 - [API Reference](https://docs.spideriq.ai/api-reference/introduction)

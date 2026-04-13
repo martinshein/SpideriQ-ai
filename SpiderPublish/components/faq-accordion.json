@@ -1,0 +1,50 @@
+{
+  "_description": "Tier 2: Interactive FAQ accordion with scoped JS. POST to /api/v1/dashboard/content/components",
+  "_tier": 2,
+  "_docs": "https://docs.spideriq.ai/site-builder/component-builder#adding-interactivity-scoped-js-tier-2",
+
+  "slug": "faq-accordion",
+  "name": "FAQ Accordion",
+  "category": "faq",
+  "version": "1.0.0",
+  "html_template": "<section class=\"faq\">\n  {% if props.headline %}<h2>{{ props.headline }}</h2>{% endif %}\n  <div class=\"items\">\n    {% for item in props.items %}\n    <div class=\"item\">\n      <button class=\"question\">\n        <span>{{ item.question }}</span>\n        <svg class=\"chevron\" width=\"20\" height=\"20\" viewBox=\"0 0 20 20\" fill=\"none\"><path d=\"M5 7.5L10 12.5L15 7.5\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"/></svg>\n      </button>\n      <div class=\"answer\" hidden>{{ item.answer }}</div>\n    </div>\n    {% endfor %}\n  </div>\n</section>",
+  "css": ":host { display: block; }\n.faq { padding: 4rem 2rem; max-width: 720px; margin: 0 auto; }\nh2 { font-size: 2rem; color: white; text-align: center; margin: 0 0 2.5rem; }\n.item { border-bottom: 1px solid #2a2a2e; }\n.question { display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 1.25rem 0; background: none; border: none; color: white; font-size: 1rem; cursor: pointer; text-align: left; font-family: var(--font-body, system-ui, sans-serif); }\n.question:hover { color: var(--primary); }\n.chevron { transition: transform 0.25s ease; flex-shrink: 0; margin-left: 1rem; }\n.item.open .chevron { transform: rotate(180deg); }\n.answer { padding: 0 0 1.25rem; color: #adadb0; line-height: 1.7; font-size: 0.95rem; }\n.answer[hidden] { display: none; }",
+  "js": "root.querySelectorAll('.question').forEach(btn => {\n  btn.addEventListener('click', () => {\n    const item = btn.closest('.item');\n    const answer = item.querySelector('.answer');\n    const wasOpen = !answer.hidden;\n    // Close all\n    root.querySelectorAll('.item').forEach(i => {\n      i.classList.remove('open');\n      i.querySelector('.answer').hidden = true;\n    });\n    // Toggle clicked\n    if (!wasOpen) {\n      item.classList.add('open');\n      answer.hidden = false;\n    }\n  });\n});",
+  "props_schema": {
+    "type": "object",
+    "properties": {
+      "headline": { "type": "string", "title": "Section Headline" },
+      "items": {
+        "type": "array",
+        "title": "FAQ Items",
+        "items": {
+          "type": "object",
+          "properties": {
+            "question": { "type": "string", "title": "Question" },
+            "answer": { "type": "string", "title": "Answer" }
+          },
+          "required": ["question", "answer"]
+        },
+        "minItems": 1
+      }
+    },
+    "required": ["items"]
+  },
+  "default_props": {
+    "headline": "Frequently Asked Questions",
+    "items": [
+      {
+        "question": "How does it work?",
+        "answer": "Sign up for a free account, connect your data sources, and deploy your site in under 5 minutes."
+      },
+      {
+        "question": "What's included in the free tier?",
+        "answer": "The free tier includes 5 pages, 1 custom domain, and unlimited visitors. No credit card required."
+      },
+      {
+        "question": "Can I use my own domain?",
+        "answer": "Yes! Add your domain in the dashboard, point your DNS to our servers, and SSL is provisioned automatically."
+      }
+    ]
+  }
+}
