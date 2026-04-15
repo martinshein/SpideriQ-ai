@@ -1,6 +1,8 @@
 # SpiderPublish — AGENTS.md
 
 > Full version: [docs.spideriq.ai/site-builder/agents](https://docs.spideriq.ai/site-builder/agents)
+> **Session Binding (Phase 11+12):** [docs.spideriq.ai/site-builder/sessions](https://docs.spideriq.ai/site-builder/sessions)
+> **Deploy Safely (preview→confirm):** [docs.spideriq.ai/site-builder/deploy-safely](https://docs.spideriq.ai/site-builder/deploy-safely)
 > Component Builder: [docs.spideriq.ai/site-builder/component-builder](https://docs.spideriq.ai/site-builder/component-builder)
 > Tiers Reference: [docs.spideriq.ai/site-builder/component-tiers](https://docs.spideriq.ai/site-builder/component-tiers)
 > Agent Reference: [docs.spideriq.ai/site-builder/component-agents-reference](https://docs.spideriq.ai/site-builder/component-agents-reference)
@@ -12,17 +14,24 @@
 2. Copy `CLAUDE.md` to your project root
 3. Restart your IDE
 4. Authenticate: `npx @spideriq/cli auth request --email admin@company.com --registry https://npm.spideriq.ai`
+5. **Bind this directory to a project** (mandatory): `npx @spideriq/cli use <project> --registry https://npm.spideriq.ai` — writes `./spideriq.json`
+
+From step 5 on, every dashboard call auto-rewrites to `/api/v1/dashboard/projects/{project_id}/...` and destructive tools default to `dry_run=true` (preview → confirm). Skipping step 5 falls back to legacy URLs that stop working 2026-05-14.
 
 ### Build a Site (follow ALL steps)
 ```
-template_get_help          → 1. Read the full content reference
-content_update_settings    → 2. REQUIRED: Set site_name, primary_color, logo
-content_update_navigation  → 3. Set up header menu items
-content_create_page        → 4. Create pages with blocks (slug "home" for homepage)
-content_publish_page       → 5. REQUIRED: Publish at least 1 page
-template_apply_theme       → 6. REQUIRED: Apply "default" theme
-content_deploy_readiness   → 7. Check if site is ready to deploy
-content_deploy_site        → 8. Deploy to Cloudflare edge (2-5s)
+template_get_help                     → 0. Read the full content reference (now incl. session_binding + deploy_workflow sections)
+content_update_settings               → 1. REQUIRED: Set site_name, primary_color, logo
+   └─ default dry_run=true            →    First call returns preview + confirm_token. Call again with confirm_token to apply.
+content_update_navigation             → 2. Set up header menu items (not gated)
+content_create_page                   → 3. Create pages with blocks (slug "home" for homepage; not gated)
+content_publish_page                  → 4. REQUIRED: Publish at least 1 page
+   └─ default dry_run=true            →    Same two-step flow
+template_apply_theme                  → 5. REQUIRED: Apply "default" theme
+   └─ default dry_run=true            →    Same two-step flow
+content_deploy_readiness              → 6. Check if site is ready to deploy (not gated; read-only)
+content_deploy_site_preview           → 7. Returns preview_url + confirm_token. Open preview_url in a browser.
+content_deploy_site_production        → 8. Pass confirm_token from step 7. Deploys to Cloudflare edge (2-5s).
 ```
 
 ### Deploy Requirements
@@ -36,8 +45,21 @@ Deploy **rejects** if any blocking item is missing. Always call `content_deploy_
 | At least 1 template (theme applied) | `template_apply_theme` |
 | At least 1 published page | `content_publish_page` |
 
+### Error Responses (Phase 11+12)
+
+| Status | Cause | Fix |
+|---|---|---|
+| `403 TokenInvalid` | `confirm_token` doesn't exist | Issue a fresh one via `dry_run=true` |
+| `403 TokenClientMismatch` | Token was for a different project | Wrong directory — check `spideriq.json` |
+| `403 TokenActionMismatch` | Token was for a different action | Don't reuse tokens across operations |
+| `409 TokenConsumed` | Single-use token already used | Issue a fresh one |
+| `410 TokenExpired` | Past expires_at (7 days) | Issue a fresh one |
+
 ### Common Mistakes
 
+- **Forget `spideriq use`** → every call carries `Deprecation: true` header; will 410 after 2026-05-14
+- **Call destructive tool without `confirm_token`** → you get a preview envelope instead of a mutation (by design)
+- **Reuse a `confirm_token`** → 409 on the second call (single-use)
 - **Component slug reuse** → 400 error. Use update or increment version.
 - **Deploying before publishing pages** → 400 "Missing: Published Pages"
 - **Skipping settings** → 400 "Missing: Site Settings"
@@ -78,9 +100,11 @@ Reusable UI blocks with automatic CSS isolation. The tier is detected from which
 | 3 | Rich | + `dependencies` | GSAP animations, carousels, charts |
 | 4 | App | + `framework` + `source_code` | React/Vue/Svelte apps |
 
+All destructive component operations (`publish`, `archive`, `delete`) default to `dry_run=true` in MCP — call twice with `confirm_token` to actually mutate.
+
 ### Create a Component
 ```bash
-POST /api/v1/dashboard/content/components
+POST /api/v1/dashboard/projects/{pid}/content/components
 { "slug": "hero-gradient", "name": "Gradient Hero", "category": "hero",
   "html_template": "<section><h1>{{ props.headline }}</h1></section>",
   "css": "section { background: linear-gradient(135deg, var(--primary), #000); padding: 5rem 2rem; color: white; }",
@@ -132,6 +156,8 @@ Ready-to-POST examples in `components/`:
 
 ## Full Documentation
 - [AI Agent Guide](https://docs.spideriq.ai/site-builder/agents)
+- [Session Binding](https://docs.spideriq.ai/site-builder/sessions)
+- [Deploy Safely](https://docs.spideriq.ai/site-builder/deploy-safely)
 - [Component Builder Guide](https://docs.spideriq.ai/site-builder/component-builder)
 - [Component Tiers Reference](https://docs.spideriq.ai/site-builder/component-tiers)
 - [Component Agent Reference](https://docs.spideriq.ai/site-builder/component-agents-reference)
