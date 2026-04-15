@@ -14,22 +14,36 @@ npx degit martinshein/SpideriQ-ai/SpiderPublish my-site
 cd my-site
 
 # Option B: Copy manually
-# Download .mcp.json + CLAUDE.md from this directory into your project root
+# Download .mcp.json + CLAUDE.md + spideriq.json.example from this directory into your project root
 ```
 
 ### 2. Authenticate
 
 ```bash
 npx @spideriq/cli auth request --email admin@company.com --registry https://npm.spideriq.ai
+# wait for admin approval, then:
+npx @spideriq/cli auth whoami --registry https://npm.spideriq.ai
 ```
 
-### 3. Ask your AI agent to build
+### 3. Bind this directory to a project (**MANDATORY** — Phase 11+12 Lock 3)
+
+```bash
+# See what's accessible
+npx @spideriq/cli use --list --registry https://npm.spideriq.ai
+
+# Bind — writes ./spideriq.json (commit it!)
+npx @spideriq/cli use <project>   # short id cli_xxx, brand slug, or company name
+```
+
+From this point every dashboard call the CLI/MCP makes auto-rewrites to `/api/v1/dashboard/projects/{project_id}/...` and destructive operations go through a preview → confirm flow. Skip this step and your calls fall back to legacy URLs stamped `Deprecation: true` / `Sunset: 2026-05-14` — they work for now but will stop after that date.
+
+### 4. Ask your AI agent to build
 
 Open your project in Claude Code, Cursor, VS Code, Windsurf, or Google Antigravity. The MCP server connects automatically. Ask:
 
-> "Build me a landing page for a SaaS product with hero, features grid, testimonials, and pricing table. Then deploy it."
+> "Build me a landing page for a SaaS product with hero, features grid, testimonials, and pricing table. Then preview the deploy."
 
-Your agent has 146+ tools available and full context from CLAUDE.md.
+Your agent has 152+ tools available and full context from CLAUDE.md. When it calls destructive tools (`content_publish_page`, `content_deploy_site_preview`, etc.) it gets a preview envelope first — review before confirming.
 
 ---
 
@@ -40,6 +54,8 @@ SpiderPublish/
 ├── .mcp.json                          # MCP server config (drop into project root)
 ├── CLAUDE.md                          # AI agent context (drop into project root)
 ├── AGENTS.md                          # Complete integration guide
+├── LEARNINGS.md                       # Gotchas & best practices (including Phase 11+12)
+├── spideriq.json.example              # Template for per-project binding file
 ├── .env.example                       # Environment variables
 ├── templates/                         # Ready-to-submit page payloads
 │   ├── homepage.json                  # Company homepage (hero + features + CTA)
@@ -58,12 +74,15 @@ SpiderPublish/
 ```
 Your AI Agent (Claude Code, Cursor, Windsurf, Antigravity...)
     │
+    │  loads ./spideriq.json → injects project_id
     │  MCP / CLI / API
     ▼
-SpiderPublish API ─────────── SpiderIQ IDAP (CRM data)
-    │                              │
-    │  POST /deploy               │  Lead name, city, rating,
-    ▼                              │  emails, phones, contacts
+SpiderPublish API  ─────────── SpiderIQ IDAP (CRM data)
+  (five-lock tenant defense)       │
+    │                              │  Lead name, city, rating,
+    │  destructive ops are         │  emails, phones, contacts
+    │  preview → confirm           │
+    ▼                              │
 Cloudflare Edge (2-5s) ◄──────────┘
     │
     ▼
@@ -78,13 +97,15 @@ https://yoursite.com
 
 | Feature | Description |
 |---------|-------------|
-| **Block-based pages** | 14 block types (hero, features, pricing, FAQ, testimonials, etc.) |
+| **Multi-tenant safety (Phase 11+12)** | Five-lock defense — `spideriq.json` session binding, project-scoped URLs, preview→confirm on destructive ops |
+| **Block-based pages** | 15 block types (hero, features, pricing, FAQ, testimonials, component, etc.) |
 | **Blog system** | Posts, authors, tags, categories, featured posts, full-text search |
 | **Dynamic landing pages** | Personalize per lead using Google Place ID — `{{ lead.name }}`, `{{ lead.city }}` |
 | **Shadow DOM components** | CSS-isolated reusable components with JSON Schema props |
 | **Liquid templates** | LiquidJS at Cloudflare's edge — 14 filters, 4 custom tags |
 | **IDAP data access** | Read your CRM data (businesses, emails, contacts, phones) |
 | **Multi-tenant** | Each client gets isolated content, custom domain, own Worker |
+| **Preview URLs** | `preview-{hash}.sites.spideriq.ai` serves the staging snapshot before you flip production |
 | **Token-efficient** | `?format=yaml` saves 40-76% tokens vs JSON |
 | **Edge deployment** | Deploy to Cloudflare Workers in 2-5 seconds |
 
@@ -105,13 +126,15 @@ Works with any IDE that supports MCP (Model Context Protocol):
 |----------|------|
 | Full docs | [docs.spideriq.ai/site-builder](https://docs.spideriq.ai/site-builder/overview) |
 | AI Agent Guide | [docs.spideriq.ai/site-builder/agents](https://docs.spideriq.ai/site-builder/agents) |
+| **Session Binding (Phase 11+12)** | [docs.spideriq.ai/site-builder/sessions](https://docs.spideriq.ai/site-builder/sessions) |
+| **Deploy Safely (preview→confirm)** | [docs.spideriq.ai/site-builder/deploy-safely](https://docs.spideriq.ai/site-builder/deploy-safely) |
 | Tutorial: Homepage | [docs.spideriq.ai/site-builder/tutorial-homepage](https://docs.spideriq.ai/site-builder/tutorial-homepage) |
 | Tutorial: Blog | [docs.spideriq.ai/site-builder/tutorial-blog](https://docs.spideriq.ai/site-builder/tutorial-blog) |
 | Tutorial: Dynamic Landing | [docs.spideriq.ai/site-builder/tutorial-dynamic-landing](https://docs.spideriq.ai/site-builder/tutorial-dynamic-landing) |
 | Gotchas & Best Practices | [docs.spideriq.ai/site-builder/learnings](https://docs.spideriq.ai/site-builder/learnings) |
 | Deploy Guide | [docs.spideriq.ai/site-builder/deployment](https://docs.spideriq.ai/site-builder/deployment) |
 | API Reference | [docs.spideriq.ai/api-reference](https://docs.spideriq.ai/api-reference/introduction) |
-| Content Reference | `GET /api/v1/content/help` (YAML, ~2,867 tokens) |
+| Content Reference | `GET /api/v1/content/help` (YAML — now includes session + deploy workflow sections) |
 
 ## API Base
 
