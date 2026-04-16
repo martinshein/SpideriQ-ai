@@ -2,7 +2,7 @@
 
 This project uses SpiderPublish (SpiderIQ's content platform) to build, manage, and deploy websites.
 
-**Current package versions:** `@spideriq/cli@0.8.2`, `@spideriq/mcp@0.8.2`, `@spideriq/core@0.8.2` — 155 MCP tools.
+**Current package versions:** `@spideriq/cli@0.8.3`, `@spideriq/mcp-publish@0.1.0`, `@spideriq/core@0.8.3` — **87 tools** (atomic SpiderPublish slice: pages, posts, docs, templates, components, domains, media + shared auth/system). The `.mcp.json` in this starter kit pins this package instead of the 157-tool kitchen-sink `@spideriq/mcp` — some IDE/LLM stacks silently drop tool injections above ~128 tools, and every tool schema re-injects into LLM context on every turn. If you need mail / leads / gate / admin tools too, add a second MCP server entry for `@spideriq/mcp-mail` / `-leads` / etc., or fall back to `@spideriq/mcp` for the whole surface.
 
 ---
 
@@ -338,7 +338,7 @@ For personalized outreach pages — each visitor sees their own business data fr
   - `{{ email }}` `{{ phone }}` `{{ mobile }}` `{{ logo }}` `{{ website }}` — contact + branding
   - Arrays for `{% for %}`: `{{ emails }}` `{{ phones }}` `{{ contacts }}` `{{ officers }}` `{{ pain_points }}` `{{ categories }}`
 
-  **Full reference:** [MERGE-TAGS.md](./MERGE-TAGS.md) in this starter kit · live at https://docs.spideriq.ai/site-builder/merge-tags/ · API: `curl https://spideriq.ai/api/v1/content/variables?format=yaml` · MCP tool: `content_get_variables` (flagged "START HERE" in `@spideriq/mcp@0.8.3+`).
+  **Full reference:** [MERGE-TAGS.md](./MERGE-TAGS.md) in this starter kit · live at https://docs.spideriq.ai/site-builder/merge-tags/ · API: `curl https://spideriq.ai/api/v1/content/variables?format=yaml` · MCP tool: `content_get_variables` (flagged "START HERE" in `@spideriq/mcp-publish@0.1.0+` and `@spideriq/mcp@0.8.3+`).
 
 - **Null-safe:** every singular returns `""` when missing, every array returns `[]`. `{% if revenue %}` branches correctly. `{{ revenue | default: "not on file" }}` gives fallbacks.
 - **Preview without real data:** `/lp/{slug}/demo` — serves the built-in Mario's Pizzeria fixture (every tag populated).

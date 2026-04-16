@@ -4,7 +4,7 @@
 
 Build websites, blogs, landing pages, and personalized outreach pages — entirely through AI agents. No browser needed. Deploy to Cloudflare's edge in 2-5 seconds.
 
-**Current versions:** `@spideriq/cli@0.8.2`, `@spideriq/mcp@0.8.2`, `@spideriq/core@0.8.2` — 155 MCP tools.
+**Current versions:** `@spideriq/cli@0.8.3`, `@spideriq/mcp-publish@0.1.0`, `@spideriq/core@0.8.3` — **87 tools** (the atomic SpiderPublish slice: pages, posts, docs, templates, components, domains, media + shared auth/system). Prefer this over the 157-tool kitchen-sink `@spideriq/mcp` — some IDE/LLM stacks silently drop tool injections above ~128 tools, and every tool schema burns LLM context on every turn.
 
 ## Quick Start (2 minutes)
 

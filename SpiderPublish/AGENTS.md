@@ -7,7 +7,7 @@
 > Tiers Reference: [docs.spideriq.ai/site-builder/component-tiers](https://docs.spideriq.ai/site-builder/component-tiers)
 > Agent Reference: [docs.spideriq.ai/site-builder/component-agents-reference](https://docs.spideriq.ai/site-builder/component-agents-reference)
 
-**Current package versions:** `@spideriq/cli@0.8.2`, `@spideriq/mcp@0.8.2` — 155 MCP tools.
+**Current package versions:** `@spideriq/cli@0.8.3`, `@spideriq/mcp-publish@0.1.0` — **87 tools** (atomic SpiderPublish slice). The kitchen-sink `@spideriq/mcp@0.8.4` (157 tools) is still published for backward compatibility, but `@spideriq/mcp-publish` is what the starter kit's `.mcp.json` now ships — under the ~128-tool injection limit enforced by some IDE/LLM stacks, and less context burn per message.
 
 ## Quick Reference
 
@@ -123,7 +123,7 @@ URL: `/lp/{page_slug}/{google_place_id}` or `/lp/{page_slug}/{salesperson}/{goog
 **Use flat email-marketing merge tags** (Mailchimp/HubSpot/ActiveCampaign style — every LLM already knows them):
 `{{ firstname }}`, `{{ company_name }}`, `{{ city }}`, `{{ industry }}`, `{{ rating }}`, `{{ email }}`, `{{ phone }}`, `{{ logo }}`, `{{ team_size }}`, `{{ founded }}`, `{{ revenue }}`, plus `{% for %}` arrays for `emails`, `phones`, `contacts`, `officers`, `pain_points`, `categories`. ~40 tags total.
 
-**Full reference (read first):** [MERGE-TAGS.md](./MERGE-TAGS.md) · live at https://docs.spideriq.ai/site-builder/merge-tags/ · API: `GET /api/v1/content/variables?format=yaml` · MCP: `content_get_variables` (in `@spideriq/mcp@0.8.3+`).
+**Full reference (read first):** [MERGE-TAGS.md](./MERGE-TAGS.md) · live at https://docs.spideriq.ai/site-builder/merge-tags/ · API: `GET /api/v1/content/variables?format=yaml` · MCP: `content_get_variables` (in `@spideriq/mcp-publish@0.1.0+` and `@spideriq/mcp@0.8.3+`).
 
 **Preview without real data:** `/lp/{slug}/demo` — serves the built-in Mario's Pizzeria fixture with every tag populated.
 

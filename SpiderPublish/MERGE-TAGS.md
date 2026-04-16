@@ -6,7 +6,7 @@ A Mailchimp-style merge-tag vocabulary for dynamic landing pages. Drop the same 
 
 **Live reference:** https://docs.spideriq.ai/site-builder/merge-tags/
 **API endpoint:** `GET https://spideriq.ai/api/v1/content/variables?format=yaml` (no auth, ~3.8k tokens)
-**MCP tool:** `content_get_variables` — tagged "START HERE for personalized landing pages" in `@spideriq/mcp@0.8.3+`
+**MCP tool:** `content_get_variables` — tagged "START HERE for personalized landing pages" in `@spideriq/mcp-publish@0.1.0+` (atomic, recommended) and `@spideriq/mcp@0.8.3+` (kitchen sink)
 
 ---
 
@@ -277,7 +277,7 @@ Both surfaces are always available.
 ## Discovery
 
 - **REST:** `GET https://spideriq.ai/api/v1/content/variables?format=yaml`
-- **MCP:** `content_get_variables` (requires `@spideriq/mcp@0.8.3+`, no auth for this specific tool)
+- **MCP:** `content_get_variables` (shipped in `@spideriq/mcp-publish@0.1.0+` and `@spideriq/mcp@0.8.3+`, no auth for this specific tool)
 - **Public docs:** https://docs.spideriq.ai/site-builder/merge-tags/ — the full Docusaurus page with syntax highlighting + search
 - **Complete example:** `examples/personalized-landing.sh` — end-to-end script that creates + publishes + deploys a personalized landing page using the demo fixture
 
