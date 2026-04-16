@@ -2,9 +2,10 @@
   "mcpServers": {
     "spideriq": {
       "command": "npx",
-      "args": ["@spideriq/mcp", "--registry", "https://npm.spideriq.ai"],
+      "args": ["-y", "@spideriq/mcp"],
       "env": {
-        "SPIDERIQ_FORMAT": "yaml"
+        "SPIDERIQ_FORMAT": "yaml",
+        "npm_config_registry": "https://npm.spideriq.ai"
       }
     }
   }
