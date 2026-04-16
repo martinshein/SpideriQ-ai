@@ -4,6 +4,8 @@
 
 Build websites, blogs, landing pages, and personalized outreach pages — entirely through AI agents. No browser needed. Deploy to Cloudflare's edge in 2-5 seconds.
 
+**Current versions:** `@spideriq/cli@0.8.2`, `@spideriq/mcp@0.8.2`, `@spideriq/core@0.8.2` — 155 MCP tools.
+
 ## Quick Start (2 minutes)
 
 ### 1. Copy files into your project
@@ -20,16 +22,16 @@ cd my-site
 ### 2. Authenticate
 
 ```bash
-npx @spideriq/cli auth request --email admin@company.com --registry https://npm.spideriq.ai
+npx @spideriq/cli auth request --email admin@company.com
 # wait for admin approval, then:
-npx @spideriq/cli auth whoami --registry https://npm.spideriq.ai
+npx @spideriq/cli auth whoami
 ```
 
 ### 3. Bind this directory to a project (**MANDATORY** — Phase 11+12 Lock 3)
 
 ```bash
 # See what's accessible
-npx @spideriq/cli use --list --registry https://npm.spideriq.ai
+npx @spideriq/cli use --list
 
 # Bind — writes ./spideriq.json (commit it!)
 npx @spideriq/cli use <project>   # short id cli_xxx, brand slug, or company name
@@ -43,7 +45,31 @@ Open your project in Claude Code, Cursor, VS Code, Windsurf, or Google Antigravi
 
 > "Build me a landing page for a SaaS product with hero, features grid, testimonials, and pricing table. Then preview the deploy."
 
-Your agent has 152+ tools available and full context from CLAUDE.md. When it calls destructive tools (`content_publish_page`, `content_deploy_site_preview`, etc.) it gets a preview envelope first — review before confirming.
+Your agent has 155 tools available and full context from CLAUDE.md. When it calls destructive tools (`content_publish_page`, `content_deploy_site_preview`, etc.) it gets a preview envelope first — review before confirming.
+
+**Customizing site chrome?** v0.8.2 added 3 tools specifically for this:
+
+```
+content_get_section_source({section: "footer"})    # read current Liquid
+content_override_section({section, liquid})         # upload a replacement
+content_apply_layout_preset({preset: "blank"})      # strip chrome entirely
+```
+
+No JavaScript Shadow-DOM-escape hacks needed. See CLAUDE.md for the full workflow.
+
+**Want to make the site light instead of dark?** One call:
+
+```
+content_update_settings({
+  surface_color:          "#ffffff",
+  surface_elevated_color: "#f5f5f5",
+  subtle_color:           "#e5e5e5",
+  body_text_color:        "#18181b",
+  heading_color:          "#0a0a0a"
+})
+```
+
+The default palette is dark ("Developer Noir"). `primary_color` is the ACCENT only — use the surface fields for the page palette.
 
 ---
 
@@ -62,10 +88,13 @@ SpiderPublish/
 │   ├── blog-setup.json                # Blog setup (author + tags + 2 posts)
 │   └── dynamic-landing.json           # Personalized outreach page
 ├── components/                        # Shadow DOM components (CSS-isolated)
-│   ├── hero-gradient.json             # Gradient hero with CTA
-│   └── pricing-cards.json             # 3-tier pricing table
+│   ├── hero-gradient.json             # Tier 1: gradient hero with CTA
+│   ├── pricing-cards.json             # Tier 1: 3-tier pricing table
+│   ├── faq-accordion.json             # Tier 2: interactive FAQ
+│   ├── stats-animated.json            # Tier 3: GSAP animated counters
+│   └── pricing-toggle.json            # Tier 4: React monthly/annual toggle
 └── examples/                          # Full workflow examples
-    ├── build-and-deploy.sh            # cURL-based site build
+    ├── build-and-deploy.sh            # cURL-based site build (project-scoped URLs + confirm_token flow)
     └── personalized-outreach.sh       # Dynamic landing page setup
 ```
 
@@ -99,9 +128,13 @@ https://yoursite.com
 |---------|-------------|
 | **Multi-tenant safety (Phase 11+12)** | Five-lock defense — `spideriq.json` session binding, project-scoped URLs, preview→confirm on destructive ops |
 | **Block-based pages** | 15 block types (hero, features, pricing, FAQ, testimonials, component, etc.) |
+| **Page templates** | `default`, `landing`, `blank`, `dynamic_landing` — `blank` gives a full-canvas hero with zero chrome |
+| **Theme palette (v0.8.2)** | 6 settings fields — `primary_color`, `surface_color`, `surface_elevated_color`, `subtle_color`, `body_text_color`, `heading_color` — drives the whole site. Default is dark |
+| **Chrome override (v0.8.2)** | `content_override_section` / `content_apply_layout_preset` let you customize header/footer/layout without hacks |
 | **Blog system** | Posts, authors, tags, categories, featured posts, full-text search |
 | **Dynamic landing pages** | Personalize per lead using Google Place ID — `{{ lead.name }}`, `{{ lead.city }}` |
-| **Shadow DOM components** | CSS-isolated reusable components with JSON Schema props |
+| **Shadow DOM components** | 4 tiers (static → framework build) with CSS isolation, theme CSS variables, and CDN allowlist |
+| **Scroll-linked heroes** | Canvas + `position: sticky` + GSAP ScrollTrigger pattern — see CLAUDE.md for the recipe |
 | **Liquid templates** | LiquidJS at Cloudflare's edge — 14 filters, 4 custom tags |
 | **IDAP data access** | Read your CRM data (businesses, emails, contacts, phones) |
 | **Multi-tenant** | Each client gets isolated content, custom domain, own Worker |
@@ -134,7 +167,7 @@ Works with any IDE that supports MCP (Model Context Protocol):
 | Gotchas & Best Practices | [docs.spideriq.ai/site-builder/learnings](https://docs.spideriq.ai/site-builder/learnings) |
 | Deploy Guide | [docs.spideriq.ai/site-builder/deployment](https://docs.spideriq.ai/site-builder/deployment) |
 | API Reference | [docs.spideriq.ai/api-reference](https://docs.spideriq.ai/api-reference/introduction) |
-| Content Reference | `GET /api/v1/content/help` (YAML — now includes session + deploy workflow sections) |
+| Content Reference | `GET /api/v1/content/help` (YAML — includes `tasks` index, `chrome_override`, `theme_palette`, `session_binding`, `deploy_workflow`) |
 
 ## API Base
 
