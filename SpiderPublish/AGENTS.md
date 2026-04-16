@@ -118,8 +118,18 @@ POST /api/v1/media/files/import-url
 ```
 
 ### Dynamic Landing Pages
-URL: `/lp/{page_slug}/{salesperson}/{google_place_id}`
-Variables: `{{ lead.name }}`, `{{ lead.city }}`, `{{ lead.rating }}`, `{{ salesperson.name }}`
+URL: `/lp/{page_slug}/{google_place_id}` or `/lp/{page_slug}/{salesperson}/{google_place_id}`
+
+**Use flat email-marketing merge tags** (Mailchimp/HubSpot/ActiveCampaign style — every LLM already knows them):
+`{{ firstname }}`, `{{ company_name }}`, `{{ city }}`, `{{ industry }}`, `{{ rating }}`, `{{ email }}`, `{{ phone }}`, `{{ logo }}`, `{{ team_size }}`, `{{ founded }}`, `{{ revenue }}`, plus `{% for %}` arrays for `emails`, `phones`, `contacts`, `officers`, `pain_points`, `categories`. ~40 tags total.
+
+**Full reference (read first):** [MERGE-TAGS.md](./MERGE-TAGS.md) · live at https://docs.spideriq.ai/site-builder/merge-tags/ · API: `GET /api/v1/content/variables?format=yaml` · MCP: `content_get_variables` (in `@spideriq/mcp@0.8.3+`).
+
+**Preview without real data:** `/lp/{slug}/demo` — serves the built-in Mario's Pizzeria fixture with every tag populated.
+
+Power-user: the raw `lead.*` nested shape is still in scope for fields not surfaced as merge tags. `{{ salesperson.* }}` also available when the URL includes a salesperson slug.
+
+Ready-to-run end-to-end: [`examples/personalized-landing.sh`](./examples/personalized-landing.sh).
 
 ### IDAP (CRM Data)
 ```bash
