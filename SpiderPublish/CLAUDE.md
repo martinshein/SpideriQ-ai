@@ -326,11 +326,26 @@ Ready-to-POST JSON payloads in `components/`:
 
 ## Dynamic Landing Pages
 
-For personalized outreach pages:
-- Template: `dynamic_landing`
-- URL: `/lp/{page_slug}/{salesperson}/{google_place_id}`
-- Variables: `{{ lead.name }}`, `{{ lead.city }}`, `{{ salesperson.name }}`
-- Lead data fetched automatically from IDAP by Place ID
+For personalized outreach pages — each visitor sees their own business data from the CRM.
+
+- **Template:** `dynamic_landing`
+- **URL:** `/lp/{page_slug}/{google_place_id}` or `/lp/{page_slug}/{salesperson}/{google_place_id}`
+- **Preferred vocabulary — email-marketing-style merge tags** (the same Mailchimp/HubSpot/ActiveCampaign tokens every LLM already knows):
+  - `{{ firstname }}` `{{ lastname }}` `{{ full_name }}` `{{ job_title }}` — top contact (owner/founder/exec-prioritized)
+  - `{{ company_name }}` `{{ legal_name }}` `{{ industry }}` `{{ description }}` — the business
+  - `{{ city }}` `{{ country_code }}` `{{ address }}` `{{ postal_code }}` — location
+  - `{{ rating }}` `{{ reviews_count }}` `{{ team_size }}` `{{ founded }}` `{{ revenue }}` — vitals
+  - `{{ email }}` `{{ phone }}` `{{ mobile }}` `{{ logo }}` `{{ website }}` — contact + branding
+  - Arrays for `{% for %}`: `{{ emails }}` `{{ phones }}` `{{ contacts }}` `{{ officers }}` `{{ pain_points }}` `{{ categories }}`
+
+  **Full reference:** [MERGE-TAGS.md](./MERGE-TAGS.md) in this starter kit · live at https://docs.spideriq.ai/site-builder/merge-tags/ · API: `curl https://spideriq.ai/api/v1/content/variables?format=yaml` · MCP tool: `content_get_variables` (flagged "START HERE" in `@spideriq/mcp@0.8.3+`).
+
+- **Null-safe:** every singular returns `""` when missing, every array returns `[]`. `{% if revenue %}` branches correctly. `{{ revenue | default: "not on file" }}` gives fallbacks.
+- **Preview without real data:** `/lp/{slug}/demo` — serves the built-in Mario's Pizzeria fixture (every tag populated).
+- **Power-user escape hatch:** the raw `lead.*` nested shape is still in scope — use for fields not surfaced as merge tags (e.g. `{{ lead.related.domains[0].company_vitals.tech_stack }}`).
+- **Salesperson URLs:** `/lp/{slug}/{salesperson}/{place_id}` also exposes `{{ salesperson.name }}`, `{{ salesperson.calendar_url }}`, etc. from template config.
+
+**Ready-to-run example:** [`examples/personalized-landing.sh`](./examples/personalized-landing.sh) — creates + publishes + deploys a merge-tag template end-to-end in ~30 seconds.
 
 ---
 
