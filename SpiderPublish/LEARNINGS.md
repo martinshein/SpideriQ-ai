@@ -18,6 +18,17 @@ Things that cause silent failures or broken deploys. Read before building.
 
 **Quick debug:** If you're getting unexpected 403s on dashboard calls, run `npx spideriq whoami` — it shows both the PAT scope and the session binding, and flags any mismatch between them.
 
+## Theme & Chrome
+
+| Gotcha | What Happens | Fix |
+|--------|-------------|-----|
+| Setting `primary_color: "#000000"` expecting a dark page background | No effect on background — `primary_color` is the ACCENT only (CTAs, links, borders) | Use the surface palette: `surface_color`, `surface_elevated_color`, `subtle_color`, `body_text_color`, `heading_color`. Defaults are already dark |
+| Trying to modify `<header>` / `<footer>` from component JS (`document.querySelector('body > footer').style.backgroundColor = ...`) | Works once, then breaks on edge cache flush; flashes unstyled content on every page load | Use `content_override_section({section: "footer", liquid: ...})` — every live client (danmagi, sms-chemicals, mail.spideriq.ai) does |
+| Creating a component with slug `"footer"` to replace the default site footer | Component renders wherever you add it as a block — does NOT replace the default footer section | Components and theme sections are different subsystems. Use `content_override_section` for chrome, components for page content |
+| Using Tailwind utility classes inside component CSS (e.g. `bg-black`) | Classes don't resolve inside Shadow DOM | Write plain CSS, use `var(--primary)`, `var(--surface)`, `var(--body-text)`, etc. — theme CSS variables are auto-injected |
+| Want a completely chrome-less page (no header/footer) | Setting `display: none` on default chrome via component CSS doesn't work (Shadow DOM scoping) | Set `page.template: "blank"` when creating the page. OR: `content_apply_layout_preset({preset: "blank"})` for site-wide |
+| Default theme looks "too dark" when you wanted light | By design — the canonical palette is dark (Developer Noir). Default matches 90% of agent-facing sites | Make it light in a single call: `content_update_settings({surface_color: "#ffffff", body_text_color: "#18181b", heading_color: "#0a0a0a"})` |
+
 ## Deploy
 
 | Gotcha | What Happens | Fix |
@@ -30,6 +41,7 @@ Things that cause silent failures or broken deploys. Read before building.
 | Domain not set as primary | Preview link and deploy status don't show your URL | `POST /dashboard/projects/{pid}/content/domains/{domain}/primary` |
 | No header navigation | Site renders with no menu | `PUT /dashboard/projects/{pid}/content/navigation/header` with items |
 | Preview URL returns 404 in the first ~60s | Cloudflare edge is still propagating the new Worker script | Wait 60 seconds, retry — don't "fix" the code |
+| Subdomain deploy (`mail.client.com` on client's own CF zone) returns instant 522 (<100ms) | Worker Route not attached because CF `GET /zones?name=` only matches exact zone names | Fixed in v2.x — `_ensure_worker_route` now walks up the domain hierarchy. Re-run deploy |
 
 **Rule:** Always call `content_deploy_readiness` before `content_deploy_site_preview`. It catches all the missing-prerequisite cases.
 
@@ -39,9 +51,11 @@ Things that cause silent failures or broken deploys. Read before building.
 |--------|-------------|-----|
 | Creating component with same slug+version twice | 400: "already exists" | Use `content_update_component` or increment version |
 | Component left in draft status | Won't render on live pages | Publish via `content_publish_component` (two-step: dry_run → confirm) |
-| Using Tailwind in component CSS | Classes don't work inside Shadow DOM | Write plain CSS, use `var(--primary)` for theme colors |
-| `document.querySelector()` in JS | Queries escape the Shadow DOM | Use `root.querySelector()` — `root` is the shadowRoot |
+| Using Tailwind in component CSS | Classes don't work inside Shadow DOM | Write plain CSS, use `var(--primary)` / `var(--surface)` / `var(--body-text)` for theme colors |
+| `document.querySelector()` in component JS for page-scope queries | Queries escape the Shadow DOM (sometimes works, sometimes doesn't) | Use `root.querySelector()` — `root` is the shadowRoot. For reading page scroll use `window.scrollY` + `window.innerHeight` directly |
+| Using `document.querySelector` to modify site chrome from inside a component | Broken by design — Shadow DOM + edge caching + FOUC. See Theme & Chrome table | Use `content_override_section` instead |
 | Tier 4 publish is async | 202 response but component not ready | Poll `GET .../build-status` until `success` |
+| Expecting Framer Motion to be available as a Tier 3 CDN dep | Not allowlisted — Framer Motion is React-only (needs React runtime) | Use Tier 4 (React component with `framework: "react"`) if you need it. For pure HTML, use GSAP (already allowlisted) — it's what Framer Motion's useScroll delegates to conceptually |
 
 ## Content
 
@@ -50,6 +64,7 @@ Things that cause silent failures or broken deploys. Read before building.
 | No page with slug "home" | Visitors see 404 at `/` | Create a page with `"slug": "home"` |
 | Blocks missing `id` field | Block may not render or save correctly | Every block needs a unique `id` string |
 | Rich text with raw HTML components | `<my-component>` tags in rich_text don't render as Shadow DOM components | Use block type `component` with `component_slug` instead |
+| Setting `page.template` to `"feature"` or `"legal"` | Unknown value — renderer falls back to `default` silently | Valid values: `default`, `landing`, `blank`, `dynamic_landing`. Anything else silently degrades |
 
 ## API
 
