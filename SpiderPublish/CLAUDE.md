@@ -2,6 +2,8 @@
 
 This project uses SpiderPublish (SpiderIQ's content platform) to build, manage, and deploy websites.
 
+**Current package versions:** `@spideriq/cli@0.8.2`, `@spideriq/mcp@0.8.2`, `@spideriq/core@0.8.2` — 155 MCP tools.
+
 ---
 
 ## Multi-Tenant Safety (Phase 11+12) — **READ FIRST**
@@ -12,7 +14,7 @@ Every dashboard call you make is enforced across five independent tenant locks. 
 
 ```bash
 # List projects your token can access
-npx @spideriq/cli use --list --registry https://npm.spideriq.ai
+npx @spideriq/cli use --list
 
 # Bind — writes ./spideriq.json (commit it like .vercel/project.json)
 npx @spideriq/cli use <project>   # short id cli_xxx, brand slug, or company name
@@ -22,7 +24,7 @@ After this, every dashboard URL auto-rewrites to `/api/v1/dashboard/projects/{pr
 
 ### Destructive operations are two-step by default
 
-MCP tools like `content_publish_page`, `content_delete_page`, `content_update_settings`, `template_apply_theme`, and `content_deploy_site` now default to **`dry_run=true`**. The first call returns a preview envelope with a `confirm_token`; the second call (same args + `confirm_token`) actually mutates.
+MCP tools like `content_publish_page`, `content_delete_page`, `content_update_settings`, `template_apply_theme`, and `content_deploy_site` default to **`dry_run=true`**. The first call returns a preview envelope with a `confirm_token`; the second call (same args + `confirm_token`) actually mutates.
 
 ```
 content_publish_page({ page_id: "abc-123" })
@@ -46,32 +48,32 @@ Full details: `docs.spideriq.ai/site-builder/sessions` and `docs.spideriq.ai/sit
 
 ## MCP Setup
 
-The `.mcp.json` in this project connects to SpiderIQ. After IDE restart, you have 152+ tools.
+The `.mcp.json` in this project connects to SpiderIQ. After IDE restart, you have 155 tools.
 
 ## Authentication
 
 ```bash
 # Check auth
-npx @spideriq/cli auth whoami --registry https://npm.spideriq.ai
+npx @spideriq/cli auth whoami
 
 # Request access (emails admin, wait for approval)
-npx @spideriq/cli auth request --email admin@company.com --registry https://npm.spideriq.ai
+npx @spideriq/cli auth request --email admin@company.com
 
 # Bind directory to project (MANDATORY after auth — see top of file)
-npx @spideriq/cli use <project> --registry https://npm.spideriq.ai
+npx @spideriq/cli use <project>
 ```
 
 ## Build a Site
 
 All dashboard URLs below assume the CLI/MCP auto-injects `/projects/{pid}/` from `./spideriq.json`. If no binding is set they still work via legacy paths but with Deprecation headers.
 
-1. **Read the reference first:** `template_get_help` MCP tool (or `GET /api/v1/content/help?format=yaml`) — now includes dedicated `session_binding` + `deploy_workflow` sections
-2. **Settings:** `PATCH /dashboard/projects/{pid}/content/settings` — REQUIRED: site_name, primary_color, logo. Gated: first call with `?dry_run=true`, then `?confirm_token=cft_...`
+1. **Read the reference first:** `template_get_help` MCP tool (or `GET /api/v1/content/help?format=yaml`) — includes `tasks` index, `getting_started` preamble, `chrome_override`, `theme_palette`, `session_binding`, `deploy_workflow` sections.
+2. **Settings:** `PATCH /dashboard/projects/{pid}/content/settings` — REQUIRED: `site_name`. Optional but recommended: `primary_color` (accent), `logo_light_url`, plus the full theme palette below. Gated: first call with `?dry_run=true`, then `?confirm_token=cft_...`
 3. **Navigation:** `PUT /dashboard/projects/{pid}/content/navigation/header` — menu items (not gated)
-4. **Pages:** `POST /dashboard/projects/{pid}/content/pages` — create with blocks (slug `home` for homepage) (not gated)
-5. **Publish:** `POST /dashboard/projects/{pid}/content/pages/{id}/publish` — REQUIRED: at least 1 published page. Gated: dry_run → confirm_token
-6. **Theme:** `POST /dashboard/projects/{pid}/templates/apply-theme` — REQUIRED: apply `default`. Gated: dry_run → confirm_token
-7. **Check readiness:** `content_deploy_readiness` MCP tool — verify all blocking checks pass
+4. **Pages:** `POST /dashboard/projects/{pid}/content/pages` — create with blocks (slug `home` for homepage; `template` picks the layout — see Page Templates below) (not gated)
+5. **Publish:** `POST /dashboard/projects/{pid}/content/pages/{id}/publish` — REQUIRED: at least 1 published page. Gated.
+6. **Theme:** `POST /dashboard/projects/{pid}/templates/apply-theme` — REQUIRED: apply `default`. Gated.
+7. **Check readiness:** `content_deploy_readiness` MCP tool — verify all blocking checks pass.
 8. **Deploy:** two steps (replaces the old single-step deploy):
    - `POST /dashboard/projects/{pid}/content/deploy/preview` → returns `preview_url` + `confirm_token`
    - Review `preview_url` in a browser
@@ -104,25 +106,173 @@ Deploy **rejects** if any of these are missing:
 |---------|-------------|-----|
 | Forget `spideriq use` at the start | Deprecation header on every response, legacy URLs stop working 2026-05-14 | Run `spideriq use <project>` once, commit `spideriq.json` |
 | Call destructive MCP tool without `confirm_token` or explicit `dry_run=false` | Returns a preview envelope instead of mutating | Feature, not bug — call again with the returned `confirm_token` |
-| Call `content_deploy_site` instead of the split preview/production tools | Still works (back-compat dispatcher) but discouraged | Use `content_deploy_site_preview` → `content_deploy_site_production` |
-| Skip settings, go straight to deploy | 400: "Missing: Site Settings" | Set settings first (step 2) |
-| Create components with same slug twice | 400: "already exists" | Use `content_update_component` or increment version |
+| Set `primary_color: "#000000"` expecting a dark page background | `primary_color` is the accent (CTAs, links); background is unchanged | Use `surface_color` / `body_text_color` / `heading_color` — see Theme Palette below |
+| Build JavaScript that modifies `<header>` / `<footer>` from component JS | Works once, breaks on edge cache flush, FOUC on every page load | Use `content_override_section` — see Customize Header/Footer below |
+| Create a component with `slug: "footer"` to replace the default footer | Component renders as a block wherever you add it, doesn't touch the real footer | Components ≠ theme sections. Use `content_override_section({section: "footer", ...})` |
+| Create components with same slug+version twice | 400: "already exists" | Use `content_update_component` or increment version |
 | Create pages but forget to publish them | 400: "Missing: Published Pages" | Publish at least 1 page (step 5) |
 | Skip `apply-theme` | 400: "Missing: Theme / Templates" | Apply a theme (step 6) |
 | Deploy without adding a domain | 400: "Missing: Verified Domain" | Add domain via `content_add_domain` |
 
 ## Key Rules
 
-- **Run `spideriq use` once per project** — every other rule below assumes you did.
-- **Always read `/content/help` first** — it has every block type, Liquid filter, template variable, plus `session_binding` + `deploy_workflow` sections.
+- **Run `spideriq use` once per project** — every other rule assumes you did.
+- **Always read `/content/help` first** — it has every block type, Liquid filter, template variable, plus `tasks`, `session_binding`, `deploy_workflow`, `chrome_override`, `theme_palette`.
 - **Always preview destructive ops** — MCP defaults to `dry_run=true`; only consume when you've seen the preview.
 - **Check readiness before deploy preview** — `content_deploy_readiness` MCP tool.
 - **Component slugs must be unique** per version — duplicates return 400.
 - **Use `format=yaml`** on GET requests — saves 40-76% tokens.
-- **Block types:** hero, features_grid, cta_section, testimonials, pricing_table, faq, stats_bar, rich_text, image, video_embed, code_example, logo_cloud, comparison_table, spacer, component
-- **Page templates:** default, landing, feature, legal, dynamic_landing
+- **Block types:** `hero, features_grid, cta_section, testimonials, pricing_table, faq, stats_bar, rich_text, image, video_embed, code_example, logo_cloud, comparison_table, spacer, component`
+- **Page templates:** `default, landing, blank, dynamic_landing` (see Page Templates below)
 - **Public endpoints** (GET /content/*) need no auth — use `X-Content-Domain` header
 - **Dashboard endpoints** (POST/PATCH /dashboard/projects/{pid}/content/*) need Bearer auth + auto-injected project segment
+
+---
+
+## Page Templates
+
+The `template` field on a page row picks the Liquid layout it renders with. Unknown values fall back to `default` silently.
+
+| Template | What it does | Use for |
+|---|---|---|
+| `default` | Standard page with header + footer + default body classes | Most pages |
+| `landing` | Header + footer retained, main is full-bleed (no max-width container) | Marketing pages with full-width sections |
+| `blank` | No header, no footer, no default body classes, no layout wrapper | Landing pages with a custom hero that paints the whole viewport. Complete freedom. |
+| `dynamic_landing` | Populated with lead + salesperson data from IDAP | `/lp/` routes only |
+
+---
+
+## Theme Palette
+
+Six settings fields control the site's color palette. Null values fall back to the canonical dark default.
+
+| Setting | Purpose | Default |
+|---|---|---|
+| `primary_color` | Accent — CTAs, links, highlighted borders | `#eebf01` (SpiderIQ yellow) |
+| `surface_color` | Body / main background | `#0A0A0B` (near-black) |
+| `surface_elevated_color` | Card / panel background | `#111113` |
+| `subtle_color` | Border / subtle background | `#1A1A1D` |
+| `body_text_color` | Default body text | `#e5e5e5` |
+| `heading_color` | Headings / logo text | `#ffffff` |
+
+**Make the whole site light:**
+
+```json
+PATCH /dashboard/projects/{pid}/content/settings?dry_run=true
+{
+  "primary_color":          "#3b82f6",
+  "surface_color":          "#ffffff",
+  "surface_elevated_color": "#f5f5f5",
+  "subtle_color":           "#e5e5e5",
+  "body_text_color":        "#18181b",
+  "heading_color":          "#0a0a0a"
+}
+```
+
+Then confirm with the returned `confirm_token`.
+
+**CSS variables exposed:** `--primary`, `--primary-rgb`, `--surface`, `--surface-elevated`, `--subtle`, `--body-text`, `--heading`. Components can reference them directly — e.g. `background: var(--surface-elevated);`.
+
+**Important:** `primary_color` is ONLY the accent. It does NOT change the page background. If you want "the whole site dark/light," set the surface/text fields.
+
+---
+
+## Customize Header/Footer
+
+For changes beyond colors — custom markup, different navigation layout, removing chrome entirely — use per-client template overrides. This is THE supported path. Three tools:
+
+```
+content_get_section_source({ section: "footer" })
+  → { path: "sections/footer.liquid", source: "<footer class=...>", is_override: false }
+
+# modify the returned Liquid in your own context …
+
+content_override_section({ section: "footer", liquid: "<footer class='my-dark'>...</footer>" })
+  → uploads to your client's KV; takes precedence over the default
+
+content_deploy_preview() → content_deploy_production(confirm_token)
+  → ships
+```
+
+**Sections available:** `header`, `footer`, `layout`, `head`, `hero`.
+
+**Layout presets** for common "wrap the whole site differently" asks:
+
+```
+content_apply_layout_preset({ preset: "default" | "blank" | "landing" })
+  → uploads a canned layout/theme.liquid override
+```
+
+| Preset | What it produces |
+|---|---|
+| `default` | Header + footer, standard `bg-surface` body |
+| `blank` | No header, no footer, no body classes — complete freedom for full-bleed heroes |
+| `landing` | Header retained, no footer, full-bleed main |
+
+**Do NOT** build JavaScript that queries `document.querySelector('body > footer')` from a component's JS to modify site chrome — it breaks on Shadow DOM hydration, flashes unstyled content, and drops on edge cache flushes. Use `content_override_section` instead. Every live client does.
+
+Used in production by: `thedanmagi.com`, `sms-chemicals.com`, `mail.spideriq.ai`.
+
+---
+
+## Scroll-Linked Hero (Image Sequence)
+
+Cinematic scroll-scrubbed frame sequence heroes (like `thedanmagi.com`) are a Tier 3 component pattern. The canonical reference is `danmagi-flow-video` v1.3.0. The recipe:
+
+**HTML:**
+```html
+<section class="flow-sequence-container">
+  <div class="flow-sticky">
+    <canvas id="flow-canvas"></canvas>
+  </div>
+</section>
+```
+
+**CSS:**
+```css
+:host { display: block; }
+.flow-sequence-container { height: 400vh; position: relative; background: var(--surface); }
+.flow-sticky {
+  position: sticky; top: 0;
+  height: 100vh; width: 100%;
+  overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+}
+#flow-canvas { width: 100%; height: 100%; object-fit: contain; }
+```
+
+**JS** (with `dependencies: ["gsap", "gsap/ScrollTrigger"]`):
+```js
+const frameCount = 120;
+const frameUrl = i => `https://YOUR-FRAMES/frame_${String(i+1).padStart(4,'0')}.jpg`;
+const canvas = root.querySelector('#flow-canvas');
+const ctx = canvas.getContext('2d');
+canvas.width = 1280; canvas.height = 720;
+const images = [];
+const seq = { frame: 0 };
+for (let i = 0; i < frameCount; i++) {
+  const img = new Image();
+  img.src = frameUrl(i);
+  img.onload = () => { if (Math.round(seq.frame) === i) ctx.drawImage(img, 0, 0, 1280, 720); };
+  images.push(img);
+}
+const init = () => {
+  if (typeof gsap === 'undefined' || typeof ScrollTrigger === 'undefined') return setTimeout(init, 50);
+  gsap.registerPlugin(ScrollTrigger);
+  gsap.to(seq, {
+    frame: frameCount - 1, snap: 'frame', ease: 'none',
+    scrollTrigger: { trigger: root.querySelector('.flow-sequence-container'), start: 'top top', end: 'bottom bottom', scrub: 1 },
+    onUpdate: () => { const f = Math.round(seq.frame); if (images[f]?.complete) ctx.drawImage(images[f], 0, 0, 1280, 720); }
+  });
+};
+init();
+```
+
+**Frame hosting:** any public R2/S3 bucket, `https://media.cdn.spideriq.ai/...` (via our media upload endpoint), or the client's KV at `/_assets/...`. ~120 frames @ ~50 KB each = ~6 MB total.
+
+**Pair with:** `page.template: "blank"` so the hero fills the viewport without the default header/footer chrome.
+
+---
 
 ## Components (Shadow DOM — 4 Tiers)
 
@@ -137,9 +287,10 @@ Reusable UI blocks with automatic CSS isolation. Tier is auto-detected from fiel
 
 ### Component Rules
 - **CSS is isolated** via Shadow DOM — no leaks, no Tailwind, write plain CSS in `css` field
-- **Use `var(--primary)`** for theme colors — auto-injected into every component
+- **Use `var(--primary)`, `var(--surface)`, `var(--body-text)`** etc. for theme colors — auto-injected into every component's Shadow DOM
 - **JS scoping (Tier 2+):** `root.querySelector()` only, never `document.querySelector()`. `root` is the shadowRoot, `props` is the merged props object
-- **CDN libraries (Tier 3):** set `dependencies` array with allowlist keys. Check `GET /content/cdn-allowlist` for available libraries (gsap, chartjs, swiper, lottie, etc.)
+- **Never use JS to modify site chrome** — the component's Shadow DOM cannot cleanly reach the outer document's header/footer. Use `content_override_section` (see above)
+- **CDN libraries (Tier 3):** set `dependencies` array with allowlist keys. Check `GET /content/cdn-allowlist` for available libraries (`gsap`, `gsap/ScrollTrigger`, `chartjs`, `swiper`, `lottie`, `three`, `animejs`, `alpinejs`, `countup` — 10 libraries). Framer Motion is NOT allowlisted (React-only — use Tier 4 if you need it)
 - **Framework (Tier 4):** set `framework` (react/vue/svelte) + `source_code`. Publish returns 202 (async build). Poll `build-status` endpoint
 - **Props:** define `props_schema` (JSON Schema) + `default_props`. Block props override defaults
 - **Status flow:** draft → published → archived. Only published components render on live pages
@@ -149,7 +300,7 @@ Reusable UI blocks with automatic CSS isolation. Tier is auto-detected from fiel
 ```
 POST   /dashboard/projects/{pid}/content/components                       — create
 PATCH  /dashboard/projects/{pid}/content/components/{id}                  — update
-POST   /dashboard/projects/{pid}/content/components/{id}/publish          — publish (gated: dry_run → confirm_token; Tier 4 returns 202)
+POST   /dashboard/projects/{pid}/content/components/{id}/publish          — publish (gated; Tier 4 returns 202)
 POST   /dashboard/projects/{pid}/content/components/{id}/archive          — archive (gated)
 DELETE /dashboard/projects/{pid}/content/components/{id}                  — delete (gated)
 GET    /dashboard/projects/{pid}/content/components/{id}/build-status     — Tier 4 build status
@@ -171,6 +322,8 @@ Ready-to-POST JSON payloads in `components/`:
 - `stats-animated.json` — Tier 3: GSAP ScrollTrigger animated counters
 - `pricing-toggle.json` — Tier 4: React monthly/annual pricing toggle
 
+---
+
 ## Dynamic Landing Pages
 
 For personalized outreach pages:
@@ -178,6 +331,8 @@ For personalized outreach pages:
 - URL: `/lp/{page_slug}/{salesperson}/{google_place_id}`
 - Variables: `{{ lead.name }}`, `{{ lead.city }}`, `{{ salesperson.name }}`
 - Lead data fetched automatically from IDAP by Place ID
+
+---
 
 ## Uploading Images
 
@@ -190,6 +345,8 @@ POST /api/v1/media/files/import-url
 # Use in blocks: { "type": "image", "data": { "url": "https://media.cdn.spideriq.ai/..." } }
 ```
 
+---
+
 ## IDAP Data Access
 
 Read CRM data (businesses, emails, contacts, phones):
@@ -198,14 +355,18 @@ Read CRM data (businesses, emails, contacts, phones):
 - `GET /api/v1/idap/businesses/resolve?place_id={google_place_id}`
 - `POST /api/v1/idap/businesses/{id}/flags` — flag leads as qualified/contacted
 
+---
+
 ## Templates
 
 Ready-to-submit payloads are in the `templates/` directory:
-- `templates/homepage.json` — company homepage
+- `templates/homepage.json` — company homepage (`template: "landing"`)
 - `templates/blog-setup.json` — blog with author + posts
 - `templates/dynamic-landing.json` — personalized outreach page
 
 Submit any template: read the JSON, then `POST /api/v1/dashboard/projects/{pid}/content/pages` with the payload.
+
+---
 
 ## API Base
 
@@ -218,7 +379,9 @@ Submit any template: read the JSON, then `POST /api/v1/dashboard/projects/{pid}/
 - Component Tiers: `https://docs.spideriq.ai/site-builder/component-tiers`
 - Agent Reference: `https://docs.spideriq.ai/site-builder/component-agents-reference`
 - Health: `GET /api/v1/system/health`
-- Full Reference: `GET /api/v1/content/help` (YAML, now includes session + deploy workflow sections)
+- Full Reference: `GET /api/v1/content/help` (YAML — includes `tasks` index, `chrome_override`, `theme_palette`, `session_binding`, `deploy_workflow`)
+
+---
 
 ## GitHub
 
