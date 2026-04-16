@@ -7,24 +7,26 @@
 > Tiers Reference: [docs.spideriq.ai/site-builder/component-tiers](https://docs.spideriq.ai/site-builder/component-tiers)
 > Agent Reference: [docs.spideriq.ai/site-builder/component-agents-reference](https://docs.spideriq.ai/site-builder/component-agents-reference)
 
+**Current package versions:** `@spideriq/cli@0.8.2`, `@spideriq/mcp@0.8.2` — 155 MCP tools.
+
 ## Quick Reference
 
 ### Setup
 1. Copy `.mcp.json` to your project root
 2. Copy `CLAUDE.md` to your project root
 3. Restart your IDE
-4. Authenticate: `npx @spideriq/cli auth request --email admin@company.com --registry https://npm.spideriq.ai`
-5. **Bind this directory to a project** (mandatory): `npx @spideriq/cli use <project> --registry https://npm.spideriq.ai` — writes `./spideriq.json`
+4. Authenticate: `npx @spideriq/cli auth request --email admin@company.com`
+5. **Bind this directory to a project** (mandatory): `npx @spideriq/cli use <project>` — writes `./spideriq.json`
 
 From step 5 on, every dashboard call auto-rewrites to `/api/v1/dashboard/projects/{project_id}/...` and destructive tools default to `dry_run=true` (preview → confirm). Skipping step 5 falls back to legacy URLs that stop working 2026-05-14.
 
 ### Build a Site (follow ALL steps)
 ```
-template_get_help                     → 0. Read the full content reference (now incl. session_binding + deploy_workflow sections)
-content_update_settings               → 1. REQUIRED: Set site_name, primary_color, logo
+template_get_help                     → 0. Read the full content reference (tasks index, chrome_override, theme_palette, session_binding, deploy_workflow)
+content_update_settings               → 1. REQUIRED: Set site_name + optional theme palette (see Theme Palette below)
    └─ default dry_run=true            →    First call returns preview + confirm_token. Call again with confirm_token to apply.
 content_update_navigation             → 2. Set up header menu items (not gated)
-content_create_page                   → 3. Create pages with blocks (slug "home" for homepage; not gated)
+content_create_page                   → 3. Create pages with blocks (slug "home" for homepage; template picks layout — see Page Templates; not gated)
 content_publish_page                  → 4. REQUIRED: Publish at least 1 page
    └─ default dry_run=true            →    Same two-step flow
 template_apply_theme                  → 5. REQUIRED: Apply "default" theme
@@ -33,6 +35,26 @@ content_deploy_readiness              → 6. Check if site is ready to deploy (n
 content_deploy_site_preview           → 7. Returns preview_url + confirm_token. Open preview_url in a browser.
 content_deploy_site_production        → 8. Pass confirm_token from step 7. Deploys to Cloudflare edge (2-5s).
 ```
+
+### Customize Header/Footer (NEW in v0.8.2)
+
+Three tools for per-client theme-file overrides. THE supported path for site-chrome customization — do NOT build JS Shadow-DOM-escape hacks.
+
+```
+content_get_section_source            → Read current Liquid source for header | footer | layout | head | hero
+content_override_section              → Upload custom Liquid that wins over the default theme
+content_apply_layout_preset           → Apply a canned layout/theme.liquid: default | blank | landing
+```
+
+Typical workflow to "make the footer dark":
+```
+1. content_get_section_source({section: "footer"}) → returns { path, source, is_override }
+2. modify the returned Liquid in your own context
+3. content_override_section({section: "footer", liquid: modified})
+4. content_deploy_site_preview() → content_deploy_site_production(confirm_token)
+```
+
+Used in production by danmagi.com, sms-chemicals.com, mail.spideriq.ai.
 
 ### Deploy Requirements
 
@@ -59,6 +81,9 @@ Deploy **rejects** if any blocking item is missing. Always call `content_deploy_
 
 - **Forget `spideriq use`** → every call carries `Deprecation: true` header; will 410 after 2026-05-14
 - **Call destructive tool without `confirm_token`** → you get a preview envelope instead of a mutation (by design)
+- **Set `primary_color: "#000000"` expecting dark background** → primary_color is the ACCENT only; use `surface_color` + `body_text_color` + `heading_color` for the page palette (see Theme Palette)
+- **Create component with slug "footer" to override the default** → Components ≠ theme sections. Use `content_override_section`
+- **Build `document.querySelector('body > footer').style...` from component JS** → breaks on cache flush, FOUC. Use `content_override_section` instead
 - **Reuse a `confirm_token`** → 409 on the second call (single-use)
 - **Component slug reuse** → 400 error. Use update or increment version.
 - **Deploying before publishing pages** → 400 "Missing: Published Pages"
@@ -69,7 +94,22 @@ Deploy **rejects** if any blocking item is missing. Always call `content_deploy_
 `hero`, `features_grid`, `cta_section`, `testimonials`, `pricing_table`, `faq`, `stats_bar`, `rich_text`, `image`, `video_embed`, `code_example`, `logo_cloud`, `comparison_table`, `spacer`, `component`
 
 ### Page Templates
-`default`, `landing`, `feature`, `legal`, `dynamic_landing`
+`default` (header + footer), `landing` (full-bleed main), `blank` (no chrome at all — full canvas), `dynamic_landing` (/lp/ routes with lead data). Unknown values fall back to `default`.
+
+### Theme Palette (NEW in v0.8.2)
+
+6 settings fields control the site palette. Null values = default dark.
+
+| Field | Purpose | Default |
+|---|---|---|
+| `primary_color` | Accent (CTAs, links, borders) | `#eebf01` |
+| `surface_color` | Body / main background | `#0A0A0B` |
+| `surface_elevated_color` | Card / panel background | `#111113` |
+| `subtle_color` | Border / subtle bg | `#1A1A1D` |
+| `body_text_color` | Default body text | `#e5e5e5` |
+| `heading_color` | Headings / logo text | `#ffffff` |
+
+Make the whole site light: set `surface_color: "#ffffff"`, `surface_elevated_color: "#f5f5f5"`, `subtle_color: "#e5e5e5"`, `body_text_color: "#18181b"`, `heading_color: "#0a0a0a"`.
 
 ### Upload Images
 ```bash
@@ -97,7 +137,7 @@ Reusable UI blocks with automatic CSS isolation. The tier is detected from which
 |------|------|-------------|----------|
 | 1 | Static | `html_template` + `css` | Heroes, footers, content sections |
 | 2 | Interactive | + `js` | Accordions, tabs, counters, toggles |
-| 3 | Rich | + `dependencies` | GSAP animations, carousels, charts |
+| 3 | Rich | + `dependencies` | GSAP animations, carousels, charts, scroll-scrubbed heroes |
 | 4 | App | + `framework` + `source_code` | React/Vue/Svelte apps |
 
 All destructive component operations (`publish`, `archive`, `delete`) default to `dry_run=true` in MCP — call twice with `confirm_token` to actually mutate.
@@ -107,7 +147,7 @@ All destructive component operations (`publish`, `archive`, `delete`) default to
 POST /api/v1/dashboard/projects/{pid}/content/components
 { "slug": "hero-gradient", "name": "Gradient Hero", "category": "hero",
   "html_template": "<section><h1>{{ props.headline }}</h1></section>",
-  "css": "section { background: linear-gradient(135deg, var(--primary), #000); padding: 5rem 2rem; color: white; }",
+  "css": "section { background: linear-gradient(135deg, var(--primary), var(--surface)); padding: 5rem 2rem; color: var(--heading); }",
   "props_schema": { "type": "object", "properties": { "headline": { "type": "string" } }, "required": ["headline"] } }
 ```
 
@@ -115,13 +155,13 @@ POST /api/v1/dashboard/projects/{pid}/content/components
 ```json
 { "js": "root.querySelector('button').addEventListener('click', () => { /* ... */ });" }
 ```
-JS receives `root` (shadowRoot) and `props`. Use `root.querySelector()`, never `document.querySelector()`.
+JS receives `root` (shadowRoot) and `props`. Use `root.querySelector()`, never `document.querySelector()`. Never use JS to modify site chrome — use `content_override_section` instead.
 
 ### Add CDN Libraries (Tier 3)
 ```json
 { "dependencies": ["gsap", "gsap/ScrollTrigger"], "js": "gsap.registerPlugin(ScrollTrigger); /* ... */" }
 ```
-Available: `gsap`, `gsap/ScrollTrigger`, `gsap/Flip`, `animejs`, `alpinejs`, `chartjs`, `lottie`, `swiper`, `countup`, `three`. Check `GET /content/cdn-allowlist`.
+Available: `gsap`, `gsap/ScrollTrigger`, `gsap/Flip`, `animejs`, `alpinejs`, `chartjs`, `lottie`, `swiper`, `countup`, `three`. Check `GET /content/cdn-allowlist`. **Framer Motion is NOT allowlisted** (React-only — use Tier 4 if you need it).
 
 ### Framework Components (Tier 4)
 ```json
@@ -133,6 +173,19 @@ Publish returns 202 (async build). Poll `GET .../build-status` until `success`.
 ```json
 { "type": "component", "component_slug": "hero-gradient", "props": { "headline": "Welcome" } }
 ```
+
+### Scroll-Linked Hero (image sequence)
+
+The canonical pattern for cinematic scroll-scrubbed heroes (like danmagi.com's opening section):
+
+```
+Tier 3 component, deps: ["gsap", "gsap/ScrollTrigger"]
+HTML: <section class="seq"><div class="sticky"><canvas id="c"></canvas></div></section>
+CSS:  .seq { height: 400vh } .sticky { position: sticky; top: 0; height: 100vh }
+JS:   preload 120 frames → gsap.to({frame}, { scrollTrigger: { trigger, start, end, scrub: 1 }, onUpdate: drawImage })
+```
+
+Pair with `template: "blank"` so the hero fills the viewport without the default header/footer. See CLAUDE.md `Scroll-Linked Hero` section for the full recipe.
 
 ### Component Examples
 Ready-to-POST examples in `components/`:
