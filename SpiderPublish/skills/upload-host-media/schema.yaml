@@ -1,0 +1,45 @@
+name: upload-host-media
+version: "1.0.0"
+tier: 1
+description: >
+  Upload files, images, and videos to the SpiderIQ CDN (Cloudflare R2).
+  Reference catalog — JSON Schemas live in @spideriq/mcp-publish.
+
+tools:
+  upload:
+    - upload_file              # multipart — predictable filenames
+    - upload_base64            # base64 body — predictable filenames
+    - upload_image             # image-specific variant with processing
+    - media_import_from_url    # URL-based — backend prepends timestamp!
+  list_delete:
+    - list_files
+    - delete_file
+  video:
+    - media_import_video
+    - media_get_video_status
+
+predictable_filename_routes:
+  - upload_file
+  - upload_base64
+  - upload_image
+
+timestamp_prefixed_routes:
+  - media_import_from_url      # current behavior — platform fix pending
+
+public_url_format: >
+  https://media.cdn.spideriq.ai/{folder}/{filename}
+
+batch_patterns:
+  bulk_url_import:
+    tool: media_import_from_url
+    payload:
+      urls:
+        - url: https://example.com/a.png
+          filename: a.png    # optional
+      folder: optional
+  bulk_local_directory:
+    recipe: recipes/bulk-media-upload
+
+canonical_see_also:
+  - recipes/bulk-media-upload
+  - recipes/scroll-sequence

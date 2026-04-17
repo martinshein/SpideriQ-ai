@@ -1,0 +1,40 @@
+{
+  "_description": "REFERENCE: page-block config for the global sys-scroll-sequence component. NOT a component-create body — sys-scroll-sequence is already published (is_global=true), you reference it by slug in a page's blocks[] array. Produce {base_url, pattern, count} via the SpiderVideo extract_frames job (see examples/scroll-sequence.sh).",
+  "_docs": "https://docs.spideriq.ai/site-builder/component-builder",
+  "_component_reference": "sys-scroll-sequence v1.0.0 (Tier 3 — deps: gsap, gsap/ScrollTrigger). Shipped in the global component registry. Do NOT re-create it per client.",
+  "_usage": [
+    "1. Run examples/scroll-sequence.sh OR use the scroll-sequence recipe skill",
+    "2. Grab {base_url, pattern, count} from the extract_frames job manifest",
+    "3. POST the block below inside your page's blocks[] array"
+  ],
+
+  "type": "component",
+  "component_slug": "sys-scroll-sequence",
+  "props": {
+    "base_url": "https://media.cdn.spideriq.ai/clients/{client_id}/jobs/{job_id}/frames/",
+    "pattern": "frame_{index:04d}.webp",
+    "count": 120,
+    "scroll_distance_vh": 400,
+    "canvas_width": 1280,
+    "canvas_height": 720,
+    "preload_strategy": "progressive",
+    "background_color": "#000000"
+  },
+
+  "_props_schema": {
+    "base_url": "string — absolute URL prefix ending with / where all frames live",
+    "pattern": "string — filename pattern with {index} or {index:04d} placeholder",
+    "count": "integer — total frame count",
+    "scroll_distance_vh": "integer (default 400) — how much viewport-height of scroll the sequence occupies",
+    "canvas_width": "integer (default 1280) — source frame width for aspect preservation",
+    "canvas_height": "integer (default 720) — source frame height for aspect preservation",
+    "preload_strategy": "enum 'progressive' (default, ±15 frame window) or 'all' (full upfront preload)",
+    "background_color": "string (default '#000000') — canvas fill before first frame paints"
+  },
+
+  "_anti_patterns": [
+    "DON'T pass image_urls: [...] — sys-scroll-sequence v1.0.0 doesn't accept it. Use the pattern form.",
+    "DON'T set preload_strategy='all' for >60 frames — you'll DDoS the CDN and get throttled.",
+    "DON'T hardcode base_url with a pinggy/serveo tunnel — those proxies inject HTML interstitials that break frame decoding."
+  ]
+}

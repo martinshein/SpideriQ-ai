@@ -1,0 +1,91 @@
+name: scroll-sequence
+tier: 2
+description: >
+  Video → extract_frames → sys-scroll-sequence block → deploy.
+  Tool-sequence recipe for agents that consume schema.yaml as a call plan.
+
+inputs:
+  video_url:
+    type: string
+    required: true
+    hint: Public URL to mp4. Prefer media.cdn.spideriq.ai.
+  page_slug:
+    type: string
+    default: scroll-hero
+  target_frames:
+    type: integer
+    default: 120
+  scroll_distance_vh:
+    type: integer
+    default: 400
+
+steps:
+  - id: extract
+    tool: submit_job
+    payload:
+      type: spiderVideo
+      payload:
+        action: extract_frames
+        video_url: $inputs.video_url
+        strategy: target_frames
+        target_frames: $inputs.target_frames
+        output_format: webp
+    returns: { job_id }
+
+  - id: poll
+    tool: get_job_results
+    poll:
+      interval_seconds: 5
+      until: "status == 'completed'"
+      timeout_seconds: 600
+    inputs: { job_id: $extract.job_id }
+    returns: { manifest: { base_url, pattern, count } }
+
+  - id: page
+    tool: content_create_page
+    payload:
+      title: "Scroll Hero"
+      slug: $inputs.page_slug
+      template: default
+      blocks:
+        - type: component
+          component_slug: sys-scroll-sequence
+          props:
+            base_url: $poll.manifest.base_url
+            pattern: $poll.manifest.pattern
+            count: $poll.manifest.count
+            scroll_distance_vh: $inputs.scroll_distance_vh
+            preload_strategy: progressive
+    returns: { id: page_id }
+
+  - id: publish_preview
+    tool: content_publish_page
+    payload: { page_id: $page.page_id, dry_run: true }
+    returns: { confirm_token: publish_token }
+
+  - id: publish_confirm
+    tool: content_publish_page
+    payload: { page_id: $page.page_id, confirm_token: $publish_preview.publish_token }
+
+  - id: deploy_preview
+    tool: content_deploy_site_preview
+    returns: { preview_url, confirm_token: deploy_token }
+
+  - id: human_check
+    manual: true
+    hint: Open $deploy_preview.preview_url in a browser, scroll through the hero, confirm no black frames.
+
+  - id: deploy_production
+    tool: content_deploy_site_production
+    payload: { confirm_token: $deploy_preview.deploy_token }
+    returns: { status, version_id }
+
+outputs:
+  preview_url: $deploy_preview.preview_url
+  page_id: $page.page_id
+  frame_count: $poll.manifest.count
+
+anti_patterns:
+  - Hardcoding frame URLs in a custom component's JS
+  - Tunneling local frames through pinggy/serveo into media_import_from_url
+  - preload_strategy "all" with >60 frames

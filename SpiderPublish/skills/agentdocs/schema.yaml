@@ -1,0 +1,38 @@
+name: agentdocs
+version: "1.0.0"
+tier: 1
+description: >
+  Versioned documentation projects — pages with tree hierarchy, diff,
+  rollback, and full-text search. JSON Schemas in @spideriq/mcp-publish.
+
+tools:
+  projects:
+    - agentdocs_create_project
+    - agentdocs_list_projects
+    - agentdocs_get_project
+    - agentdocs_update_project
+    - agentdocs_delete_project
+    - agentdocs_update_theme
+  pages:
+    - agentdocs_create_page
+    - agentdocs_bulk_create_pages
+    - agentdocs_list_pages
+    - agentdocs_get_page
+    - agentdocs_update_page
+    - agentdocs_delete_page
+    - agentdocs_move_page
+  versioning:
+    - agentdocs_page_diff
+    - agentdocs_page_history
+    - agentdocs_page_rollback
+  search:
+    - agentdocs_search_docs
+  media:
+    - agentdocs_list_media
+
+tree_model:
+  parent_link: parent_slug
+  moves: agentdocs_move_page       # moves subtree atomically
+
+canonical_see_also:
+  - content-platform

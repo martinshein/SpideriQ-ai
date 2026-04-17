@@ -184,18 +184,39 @@ Publish returns 202 (async build). Poll `GET .../build-status` until `success`.
 { "type": "component", "component_slug": "hero-gradient", "props": { "headline": "Welcome" } }
 ```
 
-### Scroll-Linked Hero (image sequence)
+### Scroll-Linked Hero (image sequence) — use `sys-scroll-sequence`
 
-The canonical pattern for cinematic scroll-scrubbed heroes (like danmagi.com's opening section):
+**Do NOT build your own scroll-sequence component.** The global `sys-scroll-sequence` (Tier 3, is_global=true, already published) handles canvas setup, GSAP wiring, and progressive preloading. Feed it frames from a SpiderVideo `extract_frames` job:
 
 ```
-Tier 3 component, deps: ["gsap", "gsap/ScrollTrigger"]
-HTML: <section class="seq"><div class="sticky"><canvas id="c"></canvas></div></section>
-CSS:  .seq { height: 400vh } .sticky { position: sticky; top: 0; height: 100vh }
-JS:   preload 120 frames → gsap.to({frame}, { scrollTrigger: { trigger, start, end, scrub: 1 }, onUpdate: drawImage })
+1. Upload source video → https://media.cdn.spideriq.ai/.../source.mp4
+2. Submit spiderVideo extract_frames job with target_frames=120, output_format=webp
+3. Poll until completed → grab {base_url, pattern, count} from the manifest
+4. Add block to a page:
+   { type: "component",
+     component_slug: "sys-scroll-sequence",
+     props: { base_url, pattern, count,
+              scroll_distance_vh: 400,
+              preload_strategy: "progressive" } }
+5. content_deploy_site_preview → content_deploy_site_production(confirm_token)
 ```
 
-Pair with `template: "blank"` so the hero fills the viewport without the default header/footer. See CLAUDE.md `Scroll-Linked Hero` section for the full recipe.
+Runnable script: **[examples/scroll-sequence.sh](examples/scroll-sequence.sh)**
+Block config reference: **[components/scroll-sequence.json](components/scroll-sequence.json)**
+Full recipe skill (Tier 1/2/3): **[skills/recipes/scroll-sequence/](skills/recipes/scroll-sequence/)**
+
+Anti-patterns that waste 12 hours of agent time:
+- Hardcoding 100+ frame URLs → CDN rate-limits → "flashlight strobe" of black frames
+- Tunneling local frames through pinggy/serveo into `/media/files/import-url` → tunnels inject HTML interstitials saved as `.webp`
+- Rolling your own scroll component with GSAP when `sys-scroll-sequence` already does it
+
+### Upload Many Local Files
+
+If you have a directory of local assets (screenshots, logos, frames you already produced), use the **bulk-media-upload** recipe — it multipart-POSTs each file directly to `/dashboard/content/media/upload` and returns a `{filename: public_url}` map. No tunnels, no interstitials.
+
+Recipe: **[skills/recipes/bulk-media-upload/](skills/recipes/bulk-media-upload/)**
+
+Do NOT use `/media/files/import-url` with a localhost tunnel — it's the #1 cause of silent-failure deploys.
 
 ### Component Examples
 Ready-to-POST examples in `components/`:
@@ -204,6 +225,7 @@ Ready-to-POST examples in `components/`:
 - `faq-accordion.json` — Tier 2: interactive FAQ accordion
 - `stats-animated.json` — Tier 3: GSAP animated stats counter
 - `pricing-toggle.json` — Tier 4: React pricing with monthly/annual toggle
+- `scroll-sequence.json` — **reference**: page-block config for the global `sys-scroll-sequence` component (not a create body — feed it from `extract_frames`)
 
 ---
 
@@ -211,6 +233,24 @@ Ready-to-POST examples in `components/`:
 - API: 100 requests/minute
 - Jobs: 10 submissions/minute
 - Always use `?format=yaml` (saves 40-76% tokens)
+
+## Skills — Curated Recipes
+
+Multi-step workflows that compose MCP tools. Live at **[skills/](skills/)** in this starter kit.
+
+**Core building blocks** (exposed via `@spideriq/mcp-publish` — these SKILL.md files are the human/agent reference):
+- [content-platform](skills/content-platform/) — Pages, posts, docs, nav, settings, components
+- [templates-engine](skills/templates-engine/) — Liquid templates, themes, deploy to edge
+- [upload-host-media](skills/upload-host-media/) — Media upload to CDN
+- [agentdocs](skills/agentdocs/) — Versioned docs projects
+- [opvs-blog](skills/opvs-blog/) — Blog authoring
+
+**Recipes** (Tier 1 YAML doc + Tier 2 MCP-call schema + Tier 3 TypeScript impl that runs anywhere):
+- [recipes/scroll-sequence](skills/recipes/scroll-sequence/) — Video → frames → `sys-scroll-sequence` → deploy
+- [recipes/preview-iteration](skills/recipes/preview-iteration/) — Edit → preview → browser-check → confirm_token → production
+- [recipes/bulk-media-upload](skills/recipes/bulk-media-upload/) — Local directory → R2 (no tunnels needed)
+
+Tier 3 `impl.ts` files use only Node 18+ stdlib (`fetch`, `fs`, `path`) — zero npm dependencies. Copy-paste them into your agent's sandbox and run with `npx tsx impl.ts`. No opvsHUB runtime required.
 
 ## Tutorials
 - [Build a Homepage](https://docs.spideriq.ai/site-builder/tutorial-homepage)

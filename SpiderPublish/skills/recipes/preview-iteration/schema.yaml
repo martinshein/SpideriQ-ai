@@ -1,0 +1,79 @@
+name: preview-iteration
+tier: 2
+description: >
+  Safe component-edit loop using template_preview (non-mutating) + gated
+  save-publish-deploy. Eliminates "accidentally deployed broken component"
+  and provides the dev-environment feedback loop agents asked for.
+
+inputs:
+  component:
+    html_template: { type: string, required: true }
+    css: { type: string, required: true }
+    js: { type: string, required: false }
+    props_schema: { type: object, required: false }
+  props:
+    type: object
+    required: true
+    hint: Sample props to use when rendering the preview.
+
+phases:
+  - id: iterate
+    description: Pure edit/preview loop — no DB writes.
+    loop:
+      - tool: template_preview
+        payload:
+          component: $inputs.component
+          props: $inputs.props
+        returns: { preview_url, rendered_html, resolved_context }
+      - manual: true
+        hint: Open preview_url in browser. If broken, edit $inputs.component and re-run.
+    exit_when: user confirms the rendering is correct
+
+  - id: save_draft
+    description: Create or update the component in the DB (gated).
+    steps:
+      - tool: content_create_component
+        payload:
+          slug: <your-slug>
+          version: "1.0.0"
+          html_template: $inputs.component.html_template
+          css: $inputs.component.css
+          js: $inputs.component.js
+          props_schema: $inputs.component.props_schema
+          dry_run: true
+        returns: { confirm_token: create_token }
+      - tool: content_create_component
+        payload: { ..., confirm_token: $create_token }
+        returns: { id: component_id }
+
+  - id: publish
+    description: Make the component referenceable from page blocks (gated).
+    steps:
+      - tool: content_publish_component
+        payload: { component_id: $component_id, dry_run: true }
+        returns: { confirm_token: publish_token }
+      - tool: content_publish_component
+        payload: { component_id: $component_id, confirm_token: $publish_token }
+
+  - id: deploy
+    description: Preview → verify → production.
+    steps:
+      - tool: content_deploy_site_preview
+        returns: { preview_url: site_preview_url, confirm_token: deploy_token }
+      - manual: true
+        hint: Visit $site_preview_url, check the page that uses this component.
+      - tool: content_deploy_site_production
+        payload: { confirm_token: $deploy_token }
+
+non_mutating_tools:
+  - template_preview
+
+gated_mutations:
+  - content_create_component
+  - content_update_component
+  - content_publish_component
+  - content_deploy_site_production
+
+canonical_see_also:
+  - templates-engine
+  - content-platform

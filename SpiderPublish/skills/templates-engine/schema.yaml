@@ -1,0 +1,58 @@
+name: templates-engine
+version: "1.0.0"
+tier: 1
+description: >
+  Reference catalog of the templates-engine MCP tools. JSON Schemas are in
+  @spideriq/mcp-publish — this file is human/agent reading.
+
+tools:
+  templates:
+    - template_list
+    - template_get
+    - template_upsert
+    - template_delete
+    - template_preview        # the only non-mutating tool — use freely
+  themes:
+    - template_list_themes
+    - template_apply_theme    # gated: dry_run → confirm_token
+  overrides:
+    - content_get_section_source
+    - content_override_section
+    - content_apply_layout_preset
+  config:
+    - template_get_config
+    - template_update_config
+  deploy:
+    - content_deploy_readiness
+    - content_deploy_site_preview
+    - content_deploy_site_production
+    - content_deploy_status
+    - content_deploy_history
+    - content_deploy_site       # back-compat dispatcher
+  help:
+    - template_get_help         # GET /content/help — YAML reference for agents
+
+gated_with_dry_run:
+  - template_apply_theme
+  - content_deploy_site
+  - content_deploy_site_production  # requires confirm_token from _preview
+
+previewing:
+  non_mutating: true
+  returns: { rendered_html, resolved_context }
+  use_for:
+    - rapid component edit/debug before saving
+    - verifying a props_schema matches your data shape
+    - testing Liquid filter output
+
+deploy_flow:
+  - step: content_deploy_readiness
+    returns: { ready: bool, blocking: [...], warnings: [...] }
+  - step: content_deploy_site_preview
+    returns: { preview_url, confirm_token, expires_at, snapshot_hash, preview }
+  - step: content_deploy_site_production(confirm_token)
+    returns: { status: "live", version_id }
+
+canonical_see_also:
+  - content-platform
+  - recipes/preview-iteration
