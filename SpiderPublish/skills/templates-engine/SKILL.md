@@ -46,7 +46,3 @@ Liquid template CRUD, theme management, and deploy-to-edge for tenant sites. The
 - [content-platform](../content-platform/) — pages and components that these templates render
 - [recipes/preview-iteration](../recipes/preview-iteration/) — full preview → confirm flow
 - Docs: https://docs.spideriq.ai/site-builder/component-builder
-
-## Upstream
-
-Full opvsHUB source: [spideragent/skills/opvsHUB/skills/templates-engine/](https://github.com/martinshein/SpiderIQ/tree/main/spideragent/skills/opvsHUB/skills/templates-engine) (internal)

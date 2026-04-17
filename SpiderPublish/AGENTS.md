@@ -239,18 +239,17 @@ Ready-to-POST examples in `components/`:
 Multi-step workflows that compose MCP tools. Live at **[skills/](skills/)** in this starter kit.
 
 **Core building blocks** (exposed via `@spideriq/mcp-publish` — these SKILL.md files are the human/agent reference):
-- [content-platform](skills/content-platform/) — Pages, posts, docs, nav, settings, components
+- [content-platform](skills/content-platform/) — Pages, posts (with authors/tags/categories), docs, nav, settings, components
 - [templates-engine](skills/templates-engine/) — Liquid templates, themes, deploy to edge
 - [upload-host-media](skills/upload-host-media/) — Media upload to CDN
 - [agentdocs](skills/agentdocs/) — Versioned docs projects
-- [opvs-blog](skills/opvs-blog/) — Blog authoring
 
 **Recipes** (Tier 1 YAML doc + Tier 2 MCP-call schema + Tier 3 TypeScript impl that runs anywhere):
 - [recipes/scroll-sequence](skills/recipes/scroll-sequence/) — Video → frames → `sys-scroll-sequence` → deploy
 - [recipes/preview-iteration](skills/recipes/preview-iteration/) — Edit → preview → browser-check → confirm_token → production
 - [recipes/bulk-media-upload](skills/recipes/bulk-media-upload/) — Local directory → R2 (no tunnels needed)
 
-Tier 3 `impl.ts` files use only Node 18+ stdlib (`fetch`, `fs`, `path`) — zero npm dependencies. Copy-paste them into your agent's sandbox and run with `npx tsx impl.ts`. No opvsHUB runtime required.
+Tier 3 `impl.ts` files use only Node 18+ stdlib (`fetch`, `fs`, `path`) — zero npm dependencies. Copy-paste them into your agent's sandbox and run with `npx tsx impl.ts`. No extra runtime required.
 
 ## Tutorials
 - [Build a Homepage](https://docs.spideriq.ai/site-builder/tutorial-homepage)

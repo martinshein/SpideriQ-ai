@@ -14,7 +14,7 @@ Versioned documentation projects — multi-page docs with tree hierarchy, full-t
 
 ## When NOT to use
 
-- Blog posts with tags / categories / authors → [opvs-blog](../opvs-blog/) (uses `content_posts`)
+- Blog posts with tags / categories / authors → [content-platform](../content-platform/) → "Blog authoring workflow" section
 - Landing pages or marketing pages → [content-platform](../content-platform/) (uses `content_pages`)
 - Single-page FAQ-style content → a component + page block
 
@@ -39,7 +39,3 @@ Versioned documentation projects — multi-page docs with tree hierarchy, full-t
 ## See also
 
 - [content-platform](../content-platform/) — `content_get_docs_tree` at the public layer is what the Liquid renderer reads at request time
-
-## Upstream
-
-Full opvsHUB source: [spideragent/skills/opvsHUB/skills/agentdocs/](https://github.com/martinshein/SpiderIQ/tree/main/spideragent/skills/opvsHUB/skills/agentdocs) (internal)
