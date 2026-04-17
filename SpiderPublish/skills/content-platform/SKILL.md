@@ -28,6 +28,46 @@ Multi-tenant content management: pages, blog posts, docs, navigation, site setti
 | Framework component (Tier 4) | `content_create_component(framework="react", source_code="...")` → `content_publish_component` → poll `get_build_status` until success |
 | Custom domain | `content_add_domain` → `content_verify_domain` → `content_set_primary_domain` → deploy |
 
+## Blog authoring workflow
+
+Blog posts share the same underlying `content_*` tool surface as pages — the difference is the vocabulary (authors, tags, categories, featured, related) and that post bodies are Tiptap JSON, not block arrays.
+
+### First-time setup
+
+```
+content_create_author(name, slug, role, bio, avatar_url)
+content_create_category(name, slug, parent_slug?)
+content_create_tag(name, slug)
+content_create_post(author_id, category_id, tag_ids, title, slug, body, ...)
+content_publish_post(post_id)     # dry_run → confirm_token
+```
+
+### Featured posts for the homepage
+
+```
+content_list_featured_posts(limit=3)                      # read current state
+content_set_post_status(post_id, status="featured")       # mark a post featured
+```
+
+### Related posts
+
+```
+content_set_post_related(post_id, related_ids=[id1, id2, id3])
+```
+
+### Full-text search
+
+```
+content_search_posts(query, limit?)
+```
+
+### Blog-specific rules
+
+1. Post `body` is Tiptap JSON — not HTML, not Markdown. The Liquid renderer converts at request time via the `tiptap_html` filter.
+2. `view_count` auto-increments on public reads (`GET /content/posts/{slug}`). Use it for "trending" queries.
+3. Authors are soft-deleted (`deleted_at` column). List tools filter them out by default; pass `include_deleted=true` to see them.
+4. Tags and categories are **separate vocabularies** — tags are flat, categories are hierarchical (nested via `parent_id`).
+
 ## Key rules
 
 1. Every destructive tool (`publish_*`, `delete_*`, `update_settings`) defaults to `dry_run=true`. The first call returns a `confirm_token`; call again with that token to mutate.
@@ -40,7 +80,3 @@ Multi-tenant content management: pages, blog posts, docs, navigation, site setti
 - [templates-engine](../templates-engine/) — Liquid templates and themes that render these pages/posts
 - [recipes/scroll-sequence](../recipes/scroll-sequence/) — uses content-platform + SpiderVideo to ship a scroll-sequence hero
 - [recipes/preview-iteration](../recipes/preview-iteration/) — safe edit loop for components
-
-## Upstream
-
-Full opvsHUB source: [spideragent/skills/opvsHUB/skills/content-platform/](https://github.com/martinshein/SpiderIQ/tree/main/spideragent/skills/opvsHUB/skills/content-platform) (internal)

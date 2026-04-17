@@ -82,6 +82,13 @@ gated_with_dry_run:
   - template_apply_theme
   - content_deploy_site
 
+blog_workflow:
+  body_format: tiptap_json
+  read_increments_view_count: true
+  soft_deleted_authors: true        # deleted_at column; pass include_deleted=true to see
+  tags_flat: true
+  categories_hierarchical: true     # parent_id linkage
+
 canonical_see_also:
   - templates-engine
   - upload-host-media

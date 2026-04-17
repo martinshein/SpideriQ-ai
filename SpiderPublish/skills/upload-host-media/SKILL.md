@@ -45,7 +45,3 @@ Upload and host files on the SpiderIQ CDN (Cloudflare R2, served via `media.cdn.
 
 - [recipes/bulk-media-upload](../recipes/bulk-media-upload/) — the preferred local-directory path
 - [recipes/scroll-sequence](../recipes/scroll-sequence/) — video → frames (doesn't go through this skill; uses SpiderVideo directly)
-
-## Upstream
-
-Full opvsHUB source: [spideragent/skills/opvsHUB/skills/upload-host-media/](https://github.com/martinshein/SpiderIQ/tree/main/spideragent/skills/opvsHUB/skills/upload-host-media) (internal)

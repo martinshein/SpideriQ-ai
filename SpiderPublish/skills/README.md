@@ -1,8 +1,8 @@
 # SpiderPublish Skills
 
-Curated SpiderPublish-scoped skill library. **Not** a full opvsHUB mirror — just what you need to build a client site.
+Curated skill library for building SpiderPublish sites — just what you need to deploy a client site, nothing more.
 
-These skills are designed to be used directly by AI coding agents (Claude Code, Cursor, Antigravity, Windsurf). The Tier 3 `impl.ts` files use only Node 18+ stdlib (`fetch`, `fs`, `path`) — zero external npm dependencies. Copy-paste them into your agent's sandbox and run with `npx tsx impl.ts` — no opvsHUB runtime, no installs.
+These skills are designed to be used directly by AI coding agents (Claude Code, Cursor, Antigravity, Windsurf). The Tier 3 `impl.ts` files use only Node 18+ stdlib (`fetch`, `fs`, `path`) — zero external npm dependencies. Copy-paste them into your agent's sandbox and run with `npx tsx impl.ts` — no extra runtime, no installs.
 
 ## Core building blocks
 
@@ -10,11 +10,12 @@ Already exposed via `@spideriq/mcp-publish` as individual MCP tools. These SKILL
 
 | Skill | What it covers |
 |---|---|
-| [content-platform/](content-platform/) | Pages, blog posts, docs, navigation, settings, components, domains |
+| [content-platform/](content-platform/) | Pages, blog posts (authors/tags/categories), docs, navigation, settings, components, domains |
 | [templates-engine/](templates-engine/) | Liquid templates, themes, deploy to Cloudflare edge |
 | [upload-host-media/](upload-host-media/) | Image / file / video upload to CDN |
 | [agentdocs/](agentdocs/) | Versioned documentation projects |
-| [opvs-blog/](opvs-blog/) | Blog authors, tags, categories, post lifecycle |
+
+**Blog authoring** lives inside `content-platform/` — see its "Blog authoring workflow" section. The blog tools share the `content_*` namespace with pages, so they don't need a separate skill directory.
 
 ## Recipes
 
