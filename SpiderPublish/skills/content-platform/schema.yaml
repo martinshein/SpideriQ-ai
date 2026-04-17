@@ -1,0 +1,89 @@
+name: content-platform
+version: "1.2.0"
+tier: 1
+description: >
+  Reference catalog of the content-platform MCP tools. Each entry names the
+  tool, its category, and a one-line use case. The canonical JSON Schema for
+  each tool lives in @spideriq/mcp-publish — this file is human/agent reading.
+
+tools:
+  pages:
+    - content_list_pages
+    - content_create_page
+    - content_get_page
+    - content_update_page
+    - content_delete_page
+    - content_publish_page
+    - content_unpublish_page
+  posts:
+    - content_list_posts
+    - content_create_post
+    - content_get_post
+    - content_update_post
+    - content_delete_post
+    - content_publish_post
+    - content_unpublish_post
+    - content_set_post_status
+    - content_set_post_related
+    - content_list_featured_posts
+    - content_search_posts
+  authors:
+    - content_list_authors
+    - content_create_author
+    - content_get_author
+    - content_update_author
+    - content_delete_author
+  tags:
+    - content_list_tags
+    - content_create_tag
+    - content_update_tag
+    - content_delete_tag
+  categories:
+    - content_list_categories
+    - content_create_category
+    - content_update_category
+    - content_delete_category
+  docs:
+    - content_get_docs_tree
+    - content_create_doc
+  navigation:
+    - content_get_navigation
+    - content_update_navigation
+  settings:
+    - content_get_settings
+    - content_update_settings
+  domains:
+    - content_list_domains
+    - content_add_domain
+    - content_verify_domain
+    - content_set_primary_domain
+    - content_delete_domain
+  components:
+    - content_list_components
+    - content_create_component
+    - content_get_component
+    - content_get_component_by_slug
+    - content_update_component
+    - content_delete_component
+    - content_publish_component
+    - content_archive_component
+    - content_list_component_versions
+    - content_list_cdn_allowlist
+    - content_get_build_status
+
+gated_with_dry_run:
+  - content_publish_page
+  - content_unpublish_page
+  - content_delete_page
+  - content_update_settings
+  - content_publish_component
+  - content_archive_component
+  - content_delete_component
+  - template_apply_theme
+  - content_deploy_site
+
+canonical_see_also:
+  - templates-engine
+  - upload-host-media
+  - recipes/scroll-sequence
+  - recipes/preview-iteration

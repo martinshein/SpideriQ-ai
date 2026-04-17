@@ -57,6 +57,17 @@ Things that cause silent failures or broken deploys. Read before building.
 | Tier 4 publish is async | 202 response but component not ready | Poll `GET .../build-status` until `success` |
 | Expecting Framer Motion to be available as a Tier 3 CDN dep | Not allowlisted — Framer Motion is React-only (needs React runtime) | Use Tier 4 (React component with `framework: "react"`) if you need it. For pure HTML, use GSAP (already allowlisted) — it's what Framer Motion's useScroll delegates to conceptually |
 
+## Media & Scroll-Sequences
+
+| Gotcha | What Happens | Fix |
+|--------|-------------|-----|
+| Hardcoding 100+ frame URLs in a custom component's JS | Bundle bloat, concurrent GET flood triggers CDN rate-limit drops → black frames ("flashlight strobe") as the user scrolls | Use the global `sys-scroll-sequence` component with `{base_url, pattern, count}`. Feed it from a SpiderVideo `extract_frames` job — see `examples/scroll-sequence.sh` |
+| Tunneling local frames through pinggy/serveo/localhost.run into `POST /media/files/import-url` | Free tunnels inject a "security warning" HTML interstitial on first request; `import-url` returns 200 OK and saves the HTML as `.webp`. Result: every Canvas frame fails to decode → site ships with black hero silently | Either (a) use `extract_frames` so frames are produced server-side from a video URL, or (b) use the `bulk-media-upload` recipe to multipart-POST local files directly. Never tunnel. |
+| Building your own scroll-sequence component from scratch with GSAP | 12 hours of work + frame-preloading bugs + CDN DDoS risk + zero reuse | `sys-scroll-sequence` (is_global=true, Tier 3, already published) does this for you. You supply `{base_url, pattern, count}` and it handles canvas, GSAP ScrollTrigger, and progressive preloading. |
+| Using `preload_strategy: "all"` with >60 frames on `sys-scroll-sequence` | First paint triggers 60+ concurrent GETs from the same client → CDN throttles → random black frames | Use `preload_strategy: "progressive"` (default) — ±15 frame window around the current scroll position. |
+| `POST /media/files/import-url` appears to ignore your `filename` param | The per-URL `filename` field in the batch body is accepted by the API layer but the SpiderMedia backend currently prepends a timestamp (`YYYYMMDD_HHMMSS_`) to every key, so your intended `frame_0001.webp` lands as `20260417_141523_frame_0001.webp`. This breaks `{index}`-pattern lookups for `sys-scroll-sequence`. | Two options: (1) use `extract_frames` instead — the job writes predictable `frame_XXXX.webp` keys server-side, (2) use multipart `/dashboard/content/media/upload` via the `bulk-media-upload` recipe, which doesn't prefix. Platform fix (honor `filename` end-to-end) is tracked but not yet shipped. |
+| Hardcoding a scroll-sequence with URLs from `catbox.moe` / `raw.githubusercontent.com` / other public file hosts | Works initially, then rate-limit or link-rot breaks the site. No tenant isolation. No CF edge caching. | Host all site assets in the tenant's R2 (`media.cdn.spideriq.ai/clients/{cid}/...`). Every approved upload path does this automatically. |
+
 ## Content
 
 | Gotcha | What Happens | Fix |
