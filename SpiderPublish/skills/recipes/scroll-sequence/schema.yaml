@@ -1,8 +1,8 @@
 name: scroll-sequence
 tier: 2
 description: >
-  Video → extract_frames → sys-scroll-sequence block → deploy.
-  Tool-sequence recipe for agents that consume schema.yaml as a call plan.
+  Video → scroll-sequence hero. Preferred path is one tool call
+  (video_to_scroll_sequence). Legacy 5-step recipe kept for older MCP servers.
 
 inputs:
   video_url:
@@ -11,14 +11,50 @@ inputs:
     hint: Public URL to mp4. Prefer media.cdn.spideriq.ai.
   page_slug:
     type: string
-    default: scroll-hero
+    required: true
+    hint: Target page slug. Must already exist — run content_create_page first if not.
   target_frames:
     type: integer
     default: 120
   scroll_distance_vh:
     type: integer
     default: 400
+  position:
+    type: any
+    default: append
+    hint: "'append' | 'prepend' | {index:N} | {before:slug} | {after:slug}"
 
+# ============================================================
+# PREFERRED — one-shot path (v2.87.0+)
+# ============================================================
+one_shot:
+  - id: build_and_insert
+    tool: video_to_scroll_sequence
+    payload:
+      video_url: $inputs.video_url
+      page_slug: $inputs.page_slug
+      target_frames: $inputs.target_frames
+      scroll_distance_vh: $inputs.scroll_distance_vh
+      preload_strategy: progressive
+      position: $inputs.position
+    returns: { job_id, manifest, block, page }
+
+  - id: deploy_preview
+    tool: content_deploy_site_preview
+    returns: { preview_url, confirm_token: deploy_token }
+
+  - id: human_check
+    manual: true
+    hint: Open $deploy_preview.preview_url, scroll through, confirm no black frames.
+
+  - id: deploy_production
+    tool: content_deploy_site_production
+    payload: { confirm_token: $deploy_preview.deploy_token }
+    returns: { status, version_id }
+
+# ============================================================
+# LEGACY 5-step recipe — use only if video_to_scroll_sequence is unavailable.
+# ============================================================
 steps:
   - id: extract
     tool: submit_job
@@ -42,12 +78,10 @@ steps:
     returns: { manifest: { base_url, pattern, count } }
 
   - id: page
-    tool: content_create_page
+    tool: content_update_page
     payload:
-      title: "Scroll Hero"
       slug: $inputs.page_slug
-      template: default
-      blocks:
+      blocks_append:
         - type: component
           component_slug: sys-scroll-sequence
           props:
@@ -58,34 +92,21 @@ steps:
             preload_strategy: progressive
     returns: { id: page_id }
 
-  - id: publish_preview
-    tool: content_publish_page
-    payload: { page_id: $page.page_id, dry_run: true }
-    returns: { confirm_token: publish_token }
-
-  - id: publish_confirm
-    tool: content_publish_page
-    payload: { page_id: $page.page_id, confirm_token: $publish_preview.publish_token }
-
-  - id: deploy_preview
+  - id: deploy_preview_legacy
     tool: content_deploy_site_preview
     returns: { preview_url, confirm_token: deploy_token }
 
-  - id: human_check
-    manual: true
-    hint: Open $deploy_preview.preview_url in a browser, scroll through the hero, confirm no black frames.
-
-  - id: deploy_production
+  - id: deploy_production_legacy
     tool: content_deploy_site_production
-    payload: { confirm_token: $deploy_preview.deploy_token }
-    returns: { status, version_id }
+    payload: { confirm_token: $deploy_preview_legacy.deploy_token }
 
 outputs:
   preview_url: $deploy_preview.preview_url
-  page_id: $page.page_id
-  frame_count: $poll.manifest.count
+  manifest: $build_and_insert.manifest
+  page: $build_and_insert.page
 
 anti_patterns:
   - Hardcoding frame URLs in a custom component's JS
   - Tunneling local frames through pinggy/serveo into media_import_from_url
   - preload_strategy "all" with >60 frames
+  - Calling content_deploy_site_production without human review of the preview URL

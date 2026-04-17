@@ -1,8 +1,9 @@
 /**
  * recipes/scroll-sequence — Tier 3 self-contained TypeScript recipe.
  *
- * Takes a source video URL, runs SpiderVideo extract_frames, builds a page with
- * a sys-scroll-sequence block, publishes, and deploys preview + production.
+ * Preferred path (v2.87.0+): calls the single `/scroll-sequence/from-video`
+ * endpoint, which wraps extract_frames + block insertion server-side.
+ * Then orchestrates preview + confirm_token + production deploy.
  *
  * Zero external dependencies — Node 18+ fetch only. Copy-paste into any
  * agent sandbox (Claude Code, Cursor, Antigravity, plain Node) and run.
@@ -12,9 +13,10 @@
  *   SPIDERIQ_PROJECT_ID=cli_xxx \
  *   SPIDERIQ_API_URL=https://spideriq.ai \
  *   VIDEO_URL=https://media.cdn.spideriq.ai/.../source.mp4 \
+ *   PAGE_SLUG=home \
  *   npx tsx impl.ts
  *
- *   Optional: PAGE_SLUG (default: scroll-hero), TARGET_FRAMES (default: 120)
+ *   Optional: TARGET_FRAMES (default: 120), POSITION (default: append)
  */
 
 type Json = Record<string, unknown>;
@@ -24,13 +26,14 @@ const {
   SPIDERIQ_PROJECT_ID: PID,
   SPIDERIQ_API_URL: API_URL = "https://spideriq.ai",
   VIDEO_URL,
-  PAGE_SLUG = "scroll-hero",
+  PAGE_SLUG,
   TARGET_FRAMES = "120",
+  POSITION = "append",
 } = process.env;
 
-if (!TOKEN || !PID || !VIDEO_URL) {
+if (!TOKEN || !PID || !VIDEO_URL || !PAGE_SLUG) {
   console.error(
-    "Missing env. Set SPIDERIQ_TOKEN, SPIDERIQ_PROJECT_ID, VIDEO_URL."
+    "Missing env. Set SPIDERIQ_TOKEN, SPIDERIQ_PROJECT_ID, VIDEO_URL, PAGE_SLUG."
   );
   process.exit(1);
 }
@@ -57,90 +60,48 @@ async function http<T = Json>(
   return (await res.json()) as T;
 }
 
-async function run() {
-  console.log(`[1/7] submitting extract_frames job`);
-  const job = await http<{ job_id: string }>("POST", "/jobs/spiderVideo/submit", {
-    payload: {
-      action: "extract_frames",
-      video_url: VIDEO_URL,
-      strategy: "target_frames",
-      target_frames: Number(TARGET_FRAMES),
-      output_format: "webp",
-    },
-  });
-  console.log(`      job_id: ${job.job_id}`);
-
-  console.log(`[2/7] polling until completed...`);
-  let manifest: { base_url: string; pattern: string; count: number } | null = null;
-  const deadline = Date.now() + 10 * 60 * 1000;
-  while (Date.now() < deadline) {
-    const status = await http<{ status: string }>(
-      "GET",
-      `/jobs/${job.job_id}/status`
-    );
-    if (status.status === "completed") {
-      const result = await http<{ data: { manifest: typeof manifest } }>(
-        "GET",
-        `/jobs/${job.job_id}/results`
-      );
-      manifest = result.data.manifest!;
-      break;
-    }
-    if (status.status === "failed") throw new Error("extract_frames failed");
-    await new Promise((r) => setTimeout(r, 5000));
+function parsePosition(p: string): unknown {
+  if (p === "append" || p === "prepend") return p;
+  try {
+    return JSON.parse(p);
+  } catch {
+    return p;
   }
-  if (!manifest) throw new Error("job timed out");
-  console.log(
-    `      manifest: ${manifest.count} frames, pattern=${manifest.pattern}`
-  );
+}
 
-  console.log(`[3/7] creating page with sys-scroll-sequence block`);
-  const page = await http<{ id: string }>(
+async function run() {
+  console.log(`[1/4] building scroll-sequence block from ${VIDEO_URL}`);
+  const result = await http<{
+    job_id: string;
+    manifest: { base_url: string; pattern: string; count: number };
+    page: { slug: string; status: string };
+  }>(
     "POST",
-    `/dashboard/projects/${PID}/content/pages`,
+    `/dashboard/projects/${PID}/scroll-sequence/from-video`,
     {
-      title: "Scroll Hero",
-      slug: PAGE_SLUG,
-      template: "default",
-      blocks: [
-        {
-          type: "component",
-          component_slug: "sys-scroll-sequence",
-          props: {
-            base_url: manifest.base_url,
-            pattern: manifest.pattern,
-            count: manifest.count,
-            scroll_distance_vh: 400,
-            preload_strategy: "progressive",
-          },
-        },
-      ],
+      video_url: VIDEO_URL,
+      page_slug: PAGE_SLUG,
+      target_frames: Number(TARGET_FRAMES),
+      position: parsePosition(POSITION),
     }
   );
-  console.log(`      page: ${page.id}`);
-
-  console.log(`[4/7] publishing page (dry_run → confirm)`);
-  const dryrun = await http<{ confirm_token: string }>(
-    "POST",
-    `/dashboard/projects/${PID}/content/pages/${page.id}/publish?dry_run=true`
-  );
-  await http(
-    "POST",
-    `/dashboard/projects/${PID}/content/pages/${page.id}/publish?confirm_token=${dryrun.confirm_token}`
+  console.log(
+    `      job_id=${result.job_id}  frames=${result.manifest.count}  page=${result.page.slug}`
   );
 
-  console.log(`[5/7] deploying preview`);
+  console.log(`[2/4] deploying preview`);
   const preview = await http<{ preview_url: string; confirm_token: string }>(
     "POST",
     `/dashboard/projects/${PID}/content/deploy/preview`
   );
   console.log(`      preview: ${preview.preview_url}`);
+
   console.log(
-    `[6/7] verify the preview in a browser. Press ENTER to promote, Ctrl-C to abort.`
+    `[3/4] verify the preview in a browser. Press ENTER to promote, Ctrl-C to abort.`
   );
   await new Promise((r) => process.stdin.once("data", r));
 
-  console.log(`[7/7] promoting to production`);
+  console.log(`[4/4] promoting to production`);
   const prod = await http<{ status: string; version_id: number }>(
     "POST",
     `/dashboard/projects/${PID}/content/deploy/production?confirm_token=${preview.confirm_token}`
