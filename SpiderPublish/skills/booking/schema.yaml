@@ -1,0 +1,74 @@
+name: booking
+version: "1.0.0"
+tier: 1
+description: >
+  SpiderBook — customer-facing booking / appointments / service-slot pickers
+  powered by cal.com. Covers flow authoring (what the widget looks like),
+  services (what can be booked), bookings (individual reservations), and the
+  official template library. Exposed via `@spideriq/mcp@1.0.0` (kitchen-sink)
+  or as a standalone slice when published separately. See `SKILL.md` for
+  end-to-end guidance.
+
+tools:
+  flows:
+    # Dashboard authoring for the booking widget shown to customers.
+    - booking_flow_create       # draft a new flow + JSON Schema that defines the step graph
+    - booking_flow_get          # fetch current flow (+ version) by id
+    - booking_flow_update       # PATCH flow/schema/theme/translations; auto version-bump per G17
+    - booking_flow_publish      # destructive — provisions a cal.com event type; dry_run default
+    - booking_flow_preview      # returns the public /book/{flow_id} URL; read-only
+  services:
+    # Bookable units ("30 min haircut", "consultation call", etc.)
+    - service_create
+    - service_update
+    - service_delete            # destructive, soft-delete, dry_run default
+  bookings:
+    # Individual reservation rows (after a customer submits the widget).
+    - booking_list              # GET /booking/bookings — auth, paginated
+    - booking_get               # single-row lookup by booking_id
+    - booking_reschedule        # customer-side, signed manage_token
+    - booking_cancel            # customer-side, signed manage_token
+  templates:
+    # Official library of pre-built flow archetypes (nail-salon, haircut, therapy, ...).
+    - booking_template_list     # browse the global catalogue
+    - booking_template_get      # fetch one from the caller's library (post-clone)
+    - booking_template_clone    # clone a global template into the caller's schema
+
+gated_with_dry_run:
+  # Phase 11+12 destructive mutations — gate body (publish) or query (delete) with dry_run + confirm_token.
+  - booking_flow_publish
+  - service_delete
+
+not_gated:
+  # Reschedule / cancel don't have server-side dry_run — they run immediately against cal.com.
+  # Cal.com charges a round-trip on each call; treat as destructive and reconfirm with the
+  # caller (or the customer, since these use a signed manage_token from the confirmation email).
+  - booking_reschedule
+  - booking_cancel
+
+flow_shape:
+  widget_steps: jsonb             # ordered list of step nodes (service-picker, slot-picker, form, confirm)
+  answer_schema: json_schema      # describes the object the widget collects from the customer
+  translations: "optional per-locale overrides (i18n); resolver walks dotted paths like steps.<id>.label"
+  theme: "primary/surface/text colours pulled from the tenant's content_settings by default"
+
+public_surface:
+  customer_render: GET /api/v1/booking/{flow_id}/render
+  customer_slots: GET /api/v1/booking/{flow_id}/slots
+  customer_submit: POST /api/v1/booking/{flow_id}/submit
+  customer_manage: "POST /api/v1/booking/manage/{token}/{action}  (action ∈ [reschedule, cancel])"
+  standalone_route: "/book/{flow_id}  (served by the tenant Liquid renderer)"
+  embed_tag: "{% booking flow_id: biz.booking_flow_id %}  (Liquid tag — drop into any page template)"
+
+typical_agent_pattern:
+  - booking_template_list           # find a suitable archetype
+  - booking_template_clone          # copy into the tenant's library
+  - booking_flow_update             # adjust labels / steps / theme / translations
+  - booking_flow_publish(dry_run=true) → confirm_token → booking_flow_publish(confirm_token=...)
+  - booking_flow_preview            # grab the /book/{flow_id} URL
+  - content_deploy_site             # redeploy so the {% booking %} tag / /book route picks up the new flow
+
+canonical_see_also:
+  - content-platform
+  - templates-engine
+  - upload-host-media
