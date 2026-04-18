@@ -2,7 +2,7 @@
 
 This project uses SpiderPublish (SpiderIQ's content platform) to build, manage, and deploy websites.
 
-**Current package versions:** `@spideriq/cli@0.8.3`, `@spideriq/mcp-publish@0.1.0`, `@spideriq/core@0.8.3` — **87 tools** (atomic SpiderPublish slice: pages, posts, docs, templates, components, domains, media + shared auth/system). The `.mcp.json` in this starter kit pins this package instead of the 157-tool kitchen-sink `@spideriq/mcp` — some IDE/LLM stacks silently drop tool injections above ~128 tools, and every tool schema re-injects into LLM context on every turn. If you need mail / leads / gate / admin tools too, add a second MCP server entry for `@spideriq/mcp-mail` / `-leads` / etc., or fall back to `@spideriq/mcp` for the whole surface.
+**Current package versions (1.0.0, 2026-04-18):** `@spideriq/cli@1.0.0`, `@spideriq/mcp-publish@1.0.0`, `@spideriq/core@1.0.0` — **105 tools** (atomic SpiderPublish slice: pages, posts, docs, templates, components, domains, media, directory, playbook, scroll-sequence + section-override + component-propagation + local-upload one-shots). The `.mcp.json` in this starter kit pins `@spideriq/mcp-publish` instead of the kitchen-sink `@spideriq/mcp@1.0.0` (which also includes SpiderBook booking tools) — some IDE/LLM stacks silently drop tool injections above ~128 tools, and every tool schema re-injects into LLM context on every turn. If you need mail / leads / gate / admin / booking tools too, add a second MCP server entry for `@spideriq/mcp-mail` / `-leads` / `-gate` / `-admin`, or fall back to `@spideriq/mcp` for the whole surface.
 
 ---
 
