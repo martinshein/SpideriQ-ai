@@ -144,6 +144,28 @@ Server enforces weight policy and returns 400 with `suggested_action` if you bus
 
 Full recipe: **[skills/recipes/bulk-media-upload/](./skills/recipes/bulk-media-upload/SKILL.md)**
 
+### Directory Pages (programmatic SEO, v2.89.0+)
+
+Build a per-category + per-city + per-listing directory with SEO title/description templates that auto-interpolate `{category}`, `{city}`, `{listing}`. Every URL auto-lands in `/sitemap.xml`.
+
+```
+# 1. Create the category
+directory_create_category(
+  name = "Plumbers",
+  seo_title_template = "Best {category} in {city} | Your Brand"
+)
+
+# 2. Drop in an IDAP dump or SpiderMaps result set (up to 5000 per call)
+directory_bulk_upsert_listings(
+  category_slug = "plumbers",
+  listings = [{name, city, state, phone, website, rating, ...}, ...]
+)
+# → /directory/plumbers, /directory/plumbers/miami-beach-florida,
+#   /directory/plumbers/miami-beach-florida/aqua-fix all live, sitemap updated.
+```
+
+No publish step. No deploy step. `city_slug` computed automatically from `city + state`. Full recipe: **[skills/recipes/directory/](./skills/recipes/directory/SKILL.md)** · Example: **[examples/directory-bulk-import.sh](./examples/directory-bulk-import.sh)**.
+
 ### Dynamic Landing Pages
 URL: `/lp/{page_slug}/{google_place_id}` or `/lp/{page_slug}/{salesperson}/{google_place_id}`
 
