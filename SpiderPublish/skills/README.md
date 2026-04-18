@@ -23,7 +23,9 @@ Multi-step workflows composing multiple MCP tools. Each recipe has a full Tier 1
 
 | Recipe | Problem it solves |
 |---|---|
-| [recipes/scroll-sequence/](recipes/scroll-sequence/) | Cinematic scroll-scrubbed heroes. Video → `extract_frames` → `sys-scroll-sequence` block → deploy. Replaces the 12-hour "roll your own" trap. |
+| [recipes/scroll-sequence/](recipes/scroll-sequence/) | Cinematic scroll-scrubbed heroes. Video → `extract_frames` → `sys-scroll-sequence` block → deploy. Replaces the 12-hour "roll your own" trap. v1.1.0+ also accepts `image_urls[]` for hand-picked frames. |
+| [recipes/component-update-and-propagate/](recipes/component-update-and-propagate/) | Update a shared component AND repoint every consuming page's block pin — one MCP call + one confirm_token instead of the ~10-request choreography (v2.88.0+). |
+| [recipes/component-rollback/](recipes/component-rollback/) | Restore a component to an earlier version's content. Creates a new forward version + repoints pages. Pairs with update-and-propagate for undo (v2.88.0+). |
 | [recipes/preview-iteration/](recipes/preview-iteration/) | Safe edit loop: `template_preview` (no state mutation) → browser-check → publish (dry_run → confirm_token). |
 | [recipes/bulk-media-upload/](recipes/bulk-media-upload/) | Upload a local directory of files directly via multipart POST. Kills the pinggy/catbox/serveo tunnel workaround. |
 

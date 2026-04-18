@@ -1,0 +1,76 @@
+name: component-update-and-propagate
+tier: 2
+description: >
+  Update a component's HTML/CSS/props AND repoint every (or selected) consuming
+  page's block to the new version — in a single MCP call gated by one confirm_token.
+
+inputs:
+  slug:
+    type: string
+    required: true
+    hint: Component slug. Must already be published for this client.
+  content_fields:
+    type: object
+    required: true
+    hint: At least one of html_template / css / js / props_schema / default_props / dependencies / name / description
+  bump:
+    type: enum
+    values: [patch, minor, major]
+    default: patch
+  pages:
+    type: array
+    default: null
+    hint: "null = propagate to every consuming page (default). Array of slugs = staged rollout."
+
+one_shot:
+  - id: dry_run
+    tool: component_update_and_propagate
+    payload:
+      slug: $inputs.slug
+      bump: $inputs.bump
+      pages: $inputs.pages
+      html_template: $inputs.content_fields.html_template
+      css: $inputs.content_fields.css
+      js: $inputs.content_fields.js
+      props_schema: $inputs.content_fields.props_schema
+      default_props: $inputs.content_fields.default_props
+      dependencies: $inputs.content_fields.dependencies
+      name: $inputs.content_fields.name
+      description: $inputs.content_fields.description
+      dry_run: true
+    returns: { confirm_token, preview: { affected_pages, unaffected_pages, component: { current_version, new_version } } }
+
+  - id: human_check
+    manual: true
+    hint: Inspect $dry_run.preview.affected_pages. If the list matches expectations, continue.
+
+  - id: apply
+    tool: component_update_and_propagate
+    payload:
+      slug: $inputs.slug
+      bump: $inputs.bump
+      pages: $inputs.pages
+      html_template: $inputs.content_fields.html_template
+      css: $inputs.content_fields.css
+      js: $inputs.content_fields.js
+      props_schema: $inputs.content_fields.props_schema
+      default_props: $inputs.content_fields.default_props
+      dependencies: $inputs.content_fields.dependencies
+      name: $inputs.content_fields.name
+      description: $inputs.content_fields.description
+      confirm_token: $dry_run.confirm_token
+    returns: { component, affected_pages, unaffected_pages }
+
+outputs:
+  new_version: $apply.component.new_version
+  affected_page_count: "count($apply.affected_pages)"
+
+anti_patterns:
+  - DO NOT run component_update + individual content_update_page calls per page — the N-call choreography is fragile and loses atomicity
+  - DO NOT include <style> tags in html_template — Shadow DOM renders via the css field; the <style> validator will 400
+  - DO NOT call content_deploy_site_production after update_and_propagate unless you ALSO changed templates/theme/config (block content renders live via the API on next request)
+
+when_not_to_use:
+  - Single-component / single-page edit → use content_update_component + content_update_page directly
+  - You want to update only the component row without touching page pins → use content_update_component
+  - You want to roll BACK to an earlier version → use component_rollback (see sibling recipe)

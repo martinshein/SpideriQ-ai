@@ -152,6 +152,28 @@ Reusable UI blocks with automatic CSS isolation. The tier is detected from which
 
 All destructive component operations (`publish`, `archive`, `delete`) default to `dry_run=true` in MCP — call twice with `confirm_token` to actually mutate.
 
+### Site-wide component changes — use the one-shots (v2.88.0+)
+
+When a component is used on multiple pages and you want to update it site-wide, do NOT run `component_update` + N × `content_update_page` calls. Use the one-shot:
+
+```
+component_update_and_propagate(slug="hero", css=<new css>, dry_run=true)
+# → returns confirm_token + affected_pages list
+component_update_and_propagate(slug="hero", css=<new css>, confirm_token="cft_...")
+# → bumps component version, repoints every consuming page's block pin, all in one transaction
+```
+
+Add `pages: ["home"]` to stage the rollout (other pages keep their old pin). Block-level page content renders live via the content API on next request — NO tenant deploy needed.
+
+If something breaks, undo is also one call:
+
+```
+component_rollback(slug="hero", target_version="1.4.0", dry_run=true)
+# → preview; then re-run with confirm_token
+```
+
+Rollback creates a new forward version with the target version's content (immutable history). Full recipes: [skills/recipes/component-update-and-propagate/](skills/recipes/component-update-and-propagate/) + [skills/recipes/component-rollback/](skills/recipes/component-rollback/).
+
 ### Create a Component
 ```bash
 POST /api/v1/dashboard/projects/{pid}/content/components

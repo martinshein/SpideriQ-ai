@@ -52,6 +52,50 @@ video_to_scroll_sequence(
 )
 ```
 
+## Two input shapes (v1.1.0+)
+
+The `sys-scroll-sequence` component accepts **either** of these prop shapes:
+
+### Shape A — `{base_url, pattern, count}` (preferred)
+
+```json
+{
+  "type": "component",
+  "component_slug": "sys-scroll-sequence",
+  "props": {
+    "base_url": "https://media.spideriq.ai/client-xxx/content/scroll-sequences/<job_id>",
+    "pattern": "frame_{0001..0120}.webp",
+    "count": 120,
+    "scroll_distance_vh": 400,
+    "preload_strategy": "progressive"
+  }
+}
+```
+
+This is what `video_to_scroll_sequence` produces. Tiny prop footprint (~20 bytes of URLs), component expands them at render time. **Use this whenever frames come from `extract_frames`.**
+
+### Shape B — `{image_urls[]}` (v1.1.0, for hand-picked URLs)
+
+```json
+{
+  "type": "component",
+  "component_slug": "sys-scroll-sequence",
+  "props": {
+    "image_urls": [
+      "https://cdn.example.com/hero/frame_001.webp",
+      "https://cdn.example.com/hero/frame_002.webp",
+      "..."
+    ],
+    "scroll_distance_vh": 400,
+    "preload_strategy": "progressive"
+  }
+}
+```
+
+Use when frames live on multiple hosts, have non-numeric names, or come from a legacy CDN that doesn't fit a URL pattern. Heavier (all URLs stored inline, up to 600), but unconstrained.
+
+The component's `oneOf` schema rejects mixing both shapes in the same block.
+
 ## The legacy 5-step recipe (fallback — still works)
 
 If your MCP server is older than v2.87.0 (no `video_to_scroll_sequence` tool) or you need to split the steps for a custom flow:
