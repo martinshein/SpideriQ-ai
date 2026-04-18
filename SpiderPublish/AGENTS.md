@@ -7,7 +7,7 @@
 > Tiers Reference: [docs.spideriq.ai/site-builder/component-tiers](https://docs.spideriq.ai/site-builder/component-tiers)
 > Agent Reference: [docs.spideriq.ai/site-builder/component-agents-reference](https://docs.spideriq.ai/site-builder/component-agents-reference)
 
-**Current package versions:** `@spideriq/cli@0.8.3`, `@spideriq/mcp-publish@0.1.0` — **87 tools** (atomic SpiderPublish slice). The kitchen-sink `@spideriq/mcp@0.8.4` (157 tools) is still published for backward compatibility, but `@spideriq/mcp-publish` is what the starter kit's `.mcp.json` now ships — under the ~128-tool injection limit enforced by some IDE/LLM stacks, and less context burn per message.
+**Current package versions (1.0.0, 2026-04-18):** `@spideriq/cli@1.0.0`, `@spideriq/mcp-publish@1.0.0`, `@spideriq/core@1.0.0` — **105 tools** (atomic SpiderPublish slice covering pages, posts, docs, templates, components, domains, media, directory, playbook, plus scroll-sequence / section-overrides / component-propagation / local-upload one-shots). The kitchen-sink `@spideriq/mcp@1.0.0` bundles the full surface including SpiderBook booking tools (cal.com integration); pin it only if you also need mail / leads / gate / admin. The starter kit's `.mcp.json` defaults to `@spideriq/mcp-publish` — under the ~128-tool injection limit enforced by some IDE/LLM stacks, and less context burn per message.
 
 ## Quick Reference
 
@@ -172,7 +172,7 @@ URL: `/lp/{page_slug}/{google_place_id}` or `/lp/{page_slug}/{salesperson}/{goog
 **Use flat email-marketing merge tags** (Mailchimp/HubSpot/ActiveCampaign style — every LLM already knows them):
 `{{ firstname }}`, `{{ company_name }}`, `{{ city }}`, `{{ industry }}`, `{{ rating }}`, `{{ email }}`, `{{ phone }}`, `{{ logo }}`, `{{ team_size }}`, `{{ founded }}`, `{{ revenue }}`, plus `{% for %}` arrays for `emails`, `phones`, `contacts`, `officers`, `pain_points`, `categories`. ~40 tags total.
 
-**Full reference (read first):** [MERGE-TAGS.md](./MERGE-TAGS.md) · live at https://docs.spideriq.ai/site-builder/merge-tags/ · API: `GET /api/v1/content/variables?format=yaml` · MCP: `content_get_variables` (in `@spideriq/mcp-publish@0.1.0+` and `@spideriq/mcp@0.8.3+`).
+**Full reference (read first):** [MERGE-TAGS.md](./MERGE-TAGS.md) · live at https://docs.spideriq.ai/site-builder/merge-tags/ · API: `GET /api/v1/content/variables?format=yaml` · MCP: `content_get_variables` (in `@spideriq/mcp-publish@1.0.0+` and `@spideriq/mcp@1.0.0+`).
 
 **Preview without real data:** `/lp/{slug}/demo` — serves the built-in Mario's Pizzeria fixture with every tag populated.
 
