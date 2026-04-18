@@ -111,11 +111,38 @@ Deploy **rejects** if any blocking item is missing. Always call `content_deploy_
 
 Make the whole site light: set `surface_color: "#ffffff"`, `surface_elevated_color: "#f5f5f5"`, `subtle_color: "#e5e5e5"`, `body_text_color: "#18181b"`, `heading_color: "#0a0a0a"`.
 
-### Upload Images
+### Upload Images / PDFs / Video (from a URL)
 ```bash
 POST /api/v1/media/files/import-url
 { "url": "https://example.com/image.jpg", "folder": "/content" }
+# Deterministic keys (no YYYYMMDD_HHMMSS_ prefix): pass preserve_filename
+{ "url": "...", "filename": "logo.png", "preserve_filename": true, "folder": "brand" }
 ```
+
+### Upload from your local filesystem — preferred for bulk (v0.9.4+)
+
+One MCP/CLI call uploads a file or a whole directory. Scroll-sequence folders auto-optimize (Sharp → WebP q75, max 1920px) before upload, so a 120 × 1.6 MB input doesn't become a 192 MB CDN bill.
+
+```
+# MCP
+upload_local_file(local_path="./logo.webp", folder="brand")
+upload_local_directory(local_dir="./frames/", folder="scroll-sequences/hero")
+# → auto-enables auto_optimize=true + preserve_filename=true when folder starts with "scroll-sequences/"
+
+# CLI
+spideriq media upload ./logo.webp --folder brand
+spideriq media upload ./frames/ --folder scroll-sequences/hero
+```
+
+Server enforces weight policy and returns 400 with `suggested_action` if you bust it:
+
+| Target folder | Per-file hard | Batch total hard |
+|---|---|---|
+| `scroll-sequences/*` | 500 KB | 20 MB |
+| general | 20 MB | 500 MB |
+| `video/*` MIME | 500 MB | 500 MB (single-file cap is per-file limit) |
+
+Full recipe: **[skills/recipes/bulk-media-upload/](./skills/recipes/bulk-media-upload/SKILL.md)**
 
 ### Dynamic Landing Pages
 URL: `/lp/{page_slug}/{google_place_id}` or `/lp/{page_slug}/{salesperson}/{google_place_id}`
@@ -234,11 +261,11 @@ Anti-patterns that waste 12 hours of agent time:
 
 ### Upload Many Local Files
 
-If you have a directory of local assets (screenshots, logos, frames you already produced), use the **bulk-media-upload** recipe — it multipart-POSTs each file directly to `/dashboard/content/media/upload` and returns a `{filename: public_url}` map. No tunnels, no interstitials.
+One MCP/CLI call handles files or directories — see the **"Upload from your local filesystem"** section above. Scroll-sequence folders auto-optimize to WebP so a 120-frame × 1.6 MB input (192 MB, doomed) becomes ~8 MB that first-paints fast.
 
-Recipe: **[skills/recipes/bulk-media-upload/](skills/recipes/bulk-media-upload/)**
+Recipe: **[skills/recipes/bulk-media-upload/](skills/recipes/bulk-media-upload/SKILL.md)** · Example: **[examples/bulk-media-upload.sh](examples/bulk-media-upload.sh)**
 
-Do NOT use `/media/files/import-url` with a localhost tunnel — it's the #1 cause of silent-failure deploys.
+Do NOT use `/media/files/import-url` with a localhost tunnel — it's the #1 cause of silent-failure deploys (tunnels inject HTML interstitials that land as `.webp`).
 
 ### Component Examples
 Ready-to-POST examples in `components/`:
