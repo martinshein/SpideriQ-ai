@@ -1,10 +1,11 @@
 name: content-platform
-version: "1.2.0"
+version: "2.0.0"
 tier: 1
 description: >
-  Reference catalog of the content-platform MCP tools. Each entry names the
-  tool, its category, and a one-line use case. The canonical JSON Schema for
-  each tool lives in @spideriq/mcp-publish — this file is human/agent reading.
+  Reference catalog of the SpiderPublish content-platform MCP tools.
+  Each entry names the tool, its category, and a one-line use case.
+  The canonical JSON Schema for each tool lives in `@spideriq/mcp-publish` —
+  this file is human/agent reading. Matches `@spideriq/mcp-publish@1.0.0`.
 
 tools:
   pages:
@@ -70,6 +71,37 @@ tools:
     - content_list_component_versions
     - content_list_cdn_allowlist
     - content_get_build_status
+  component_propagation:
+    # One-shot tools that collapse 5-10 manual API calls into a single safe mutation.
+    - component_update_and_propagate   # update HTML/CSS + auto-bump version + update every page that references the component
+    - component_rollback               # restore a previous published component version as a new draft
+  section_overrides:
+    # Dashboard shortcuts for per-tenant section / layout overrides without rewriting a theme.
+    - content_override_section         # override header/footer/sidebar/etc for this client
+    - content_apply_layout_preset      # apply blank / chromed / minimal layout
+    - content_get_section_source       # effective Liquid source (override if present, else theme default)
+  directory:
+    # SEO-friendly programmatic directory pages (category → city → listing).
+    - directory_list_categories
+    - directory_create_category
+    - directory_get_category
+    - directory_update_category
+    - directory_delete_category
+    - directory_list_listings
+    - directory_upsert_listing
+    - directory_bulk_upsert_listings
+    - directory_import_from_idap       # pull normalized business data from an IDAP lead bundle
+    - directory_delete_listing
+  playbook:
+    # Task → tool-call sequence lookup. Agents call this FIRST when a task sounds vague.
+    - content_get_playbook
+  scroll_sequence:
+    # One-shot video → scroll-linked image sequence hero on a page.
+    - video_to_scroll_sequence
+  local_upload:
+    # Direct local-file upload path (no public URL required) for agents with filesystem access.
+    - upload_local_file
+    - upload_local_directory
 
 gated_with_dry_run:
   - content_publish_page
@@ -79,8 +111,11 @@ gated_with_dry_run:
   - content_publish_component
   - content_archive_component
   - content_delete_component
-  - template_apply_theme
   - content_deploy_site
+  - component_update_and_propagate
+  - component_rollback
+  - directory_delete_listing
+  - directory_delete_category
 
 blog_workflow:
   body_format: tiptap_json
@@ -89,8 +124,24 @@ blog_workflow:
   tags_flat: true
   categories_hierarchical: true     # parent_id linkage
 
+directory_workflow:
+  slug_shape: "/{category}/{city}/{listing}"
+  three_level_pages: true           # /directory, /directory/{cat}, /directory/{cat}/{city}, /directory/{cat}/{city}/{listing}
+  sitemap_inclusion: automatic      # listings + categories + cities are added to /sitemap.xml on publish
+  bulk_import_source: idap          # `directory_import_from_idap` expects an IDAP bundle id
+
+propagation_workflow:
+  version_bump_modes: [patch, minor, major]
+  pages_filter: optional            # pass pages=[slug1,slug2] to stage the rollout, omit to touch every consuming page
+  preview_first: true               # dry_run=true returns affected_pages + confirm_token
+  safety_pair: component_rollback   # if propagation breaks something, rollback undoes it in one call
+
 canonical_see_also:
   - templates-engine
   - upload-host-media
+  - booking
   - recipes/scroll-sequence
   - recipes/preview-iteration
+  - recipes/directory
+  - recipes/component-update-and-propagate
+  - recipes/component-rollback

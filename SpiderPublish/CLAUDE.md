@@ -349,6 +349,98 @@ For personalized outreach pages — each visitor sees their own business data fr
 
 ---
 
+## Directory Pages
+
+SEO-friendly programmatic pages at `/directory`, `/directory/{category}`, `/directory/{category}/{city}`, `/directory/{category}/{city}/{listing}`. The tenant Liquid renderer ships `directory-category.liquid`, `directory-city.liquid`, `directory-listing.liquid` by default — no custom template needed.
+
+```
+# 1. Category
+directory_create_category(name="Plumbers", slug="plumbers", description="Licensed plumbers and emergency services")
+
+# 2. Listings — bulk insert JSON array OR pull normalized data from an IDAP bundle
+directory_bulk_upsert_listings(category_slug="plumbers", listings=[...])
+# OR
+directory_import_from_idap(category_slug="plumbers", idap_bundle_id="<bundle_id>")
+
+# 3. Deploy
+content_deploy_site(dry_run=true) → confirm_token → confirm
+```
+
+Listings auto-join `/sitemap.xml` on publish. Override default templates via `content_override_section("templates/directory-listing", liquid_source=...)` if you need a custom layout.
+
+**Ready-to-run example:** [`examples/directory-bulk-import.sh`](./examples/directory-bulk-import.sh) — seed a category from a listings JSON file.
+
+**Full guide:** [`skills/recipes/directory/`](./skills/recipes/directory/)
+
+---
+
+## Booking (Appointments)
+
+Cal.com-powered appointment booking for any tenant. Ships a customer widget (`<spider-booking-widget>`), a standalone route at `/book/{flow_id}`, and a `{% booking %}` Liquid tag for embedding inside any page template.
+
+```
+# 1. Find an archetype and clone it into the tenant's library
+booking_template_list(category="nail-salon")
+booking_template_clone(template_id="nail-salon-default", business_id="<uuid>", name="Downtown Salon Bookings")
+
+# 2. Theme + translate (optional)
+booking_flow_update(flow_id=<id>, theme={primary_color: "#e8556f", button_label: "Book now"},
+                    translations={"es": {"steps.pick_service.label": "Elige un servicio"}})
+
+# 3. Publish — dry_run first (provisions the cal.com event type on commit)
+booking_flow_publish(flow_id=<id>, dry_run=true)      → confirm_token
+booking_flow_publish(flow_id=<id>, confirm_token=...) → live
+
+# 4. Grab the public URL
+booking_flow_preview(flow_id=<id>)                    → /book/{flow_id}
+
+# 5. Redeploy so the Liquid tag / /book route pick up the new flow
+content_deploy_site(dry_run=true) → confirm_token → confirm
+```
+
+Embed in a page template:
+```liquid
+{% booking flow_id: business.booking_flow_id %}
+```
+
+Customer self-service uses the signed `manage_token` from the confirmation email:
+```
+booking_reschedule(manage_token="bkm_...", new_slot_start="2026-04-20T14:00:00Z")
+booking_cancel(manage_token="bkm_...", reason="customer request")
+```
+(Reschedule / cancel are NOT gated server-side — they hit cal.com directly. Confirm with the caller before firing.)
+
+**Ready-to-run example:** [`examples/booking-flow.sh`](./examples/booking-flow.sh) — clone → theme → publish → preview → deploy in one script.
+
+**Full guide:** [`skills/booking/`](./skills/booking/)
+
+---
+
+## Change a Component Everywhere (Component Propagation)
+
+When you edit a shared component (a `header`, `hero`, `footer`, `cta` block), every page that references it needs its block version pin updated. The one-shot tool handles all of that in a single call.
+
+```
+# Preview the blast radius
+component_update_and_propagate(
+  slug="hero", css="...new rules...", bump="patch",
+  dry_run=true
+)
+# → returns affected_pages=[{slug, block_index, old_version, new_version}, ...], confirm_token
+
+# Commit
+component_update_and_propagate(slug="hero", css="...", bump="patch", confirm_token="cft_...")
+
+# Roll back if needed — creates a new forward version with the old content, repoints pages
+component_rollback(slug="hero", version="1.4.2")
+```
+
+Staging the rollout: pass `pages=["home"]` on the first commit to update only the home page, validate, then call again with `pages` omitted to roll to all.
+
+**Full guide:** [`skills/recipes/component-update-and-propagate/`](./skills/recipes/component-update-and-propagate/)
+
+---
+
 ## Uploading Images
 
 ```bash

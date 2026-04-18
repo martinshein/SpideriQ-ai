@@ -180,6 +180,35 @@ Power-user: the raw `lead.*` nested shape is still in scope for fields not surfa
 
 Ready-to-run end-to-end: [`examples/personalized-landing.sh`](./examples/personalized-landing.sh).
 
+### Booking / Appointments (SpiderBook — cal.com-powered, v1.0.0+)
+
+Customer-facing booking widget, standalone `/book/{flow_id}` route, and a `{% booking %}` Liquid tag for page templates. Flows are authored from the official archetype library (nail-salon, haircut, therapy, consultation, ...).
+
+```
+booking_template_list(category="nail-salon")
+booking_template_clone(template_id="nail-salon-default", business_id="<uuid>", name="Downtown Bookings")
+booking_flow_update(flow_id=<id>, theme={primary_color: "#e8556f"}, translations={"es": {...}})
+booking_flow_publish(flow_id=<id>, dry_run=true)   → confirm_token
+booking_flow_publish(flow_id=<id>, confirm_token=...) → live (provisions cal.com event type)
+booking_flow_preview(flow_id=<id>)                 → /book/{flow_id}
+content_deploy_site(...)                            # redeploy so /book + {% booking %} pick up the flow
+```
+
+Embed inside a page template:
+```liquid
+{% booking flow_id: business.booking_flow_id %}
+```
+
+Customer self-service (uses the signed `manage_token` from the confirmation email, NOT gated server-side):
+```
+booking_reschedule(manage_token="bkm_...", new_slot_start="2026-04-20T14:00:00Z")
+booking_cancel(manage_token="bkm_...", reason="...")
+```
+
+Reads: `booking_list(business_id, status?, since?)`, `booking_get(booking_id)`. Services (what can be booked): `service_create` / `service_update` / `service_delete` (gated). All tools live in the kitchen-sink `@spideriq/mcp@1.0.0`.
+
+**Full guide:** [skills/booking/](./skills/booking/) · **End-to-end example:** [`examples/booking-flow.sh`](./examples/booking-flow.sh).
+
 ### IDAP (CRM Data)
 ```bash
 GET /api/v1/idap/businesses?limit=20&include=emails&format=yaml
@@ -310,15 +339,19 @@ Ready-to-POST examples in `components/`:
 Multi-step workflows that compose MCP tools. Live at **[skills/](skills/)** in this starter kit.
 
 **Core building blocks** (exposed via `@spideriq/mcp-publish` — these SKILL.md files are the human/agent reference):
-- [content-platform](skills/content-platform/) — Pages, posts (with authors/tags/categories), docs, nav, settings, components
+- [content-platform](skills/content-platform/) — Pages, posts (with authors/tags/categories), docs, nav, settings, components, **directory pages**, component site-wide propagation, section overrides
+- [booking](skills/booking/) — **Appointments / bookings** powered by cal.com. Flow authoring, services, bookings, template library. Ships a `/book/{flow_id}` route + `{% booking %}` Liquid tag (in `@spideriq/mcp@1.0.0` kitchen-sink)
 - [templates-engine](skills/templates-engine/) — Liquid templates, themes, deploy to edge
-- [upload-host-media](skills/upload-host-media/) — Media upload to CDN
+- [upload-host-media](skills/upload-host-media/) — Media upload to CDN (including local-filesystem `upload_local_file` / `_directory`)
 - [agentdocs](skills/agentdocs/) — Versioned docs projects
 
 **Recipes** (Tier 1 YAML doc + Tier 2 MCP-call schema + Tier 3 TypeScript impl that runs anywhere):
 - [recipes/scroll-sequence](skills/recipes/scroll-sequence/) — Video → frames → `sys-scroll-sequence` → deploy
 - [recipes/preview-iteration](skills/recipes/preview-iteration/) — Edit → preview → browser-check → confirm_token → production
 - [recipes/bulk-media-upload](skills/recipes/bulk-media-upload/) — Local directory → R2 (no tunnels needed)
+- [recipes/directory](skills/recipes/directory/) — Category → bulk-upsert listings (or IDAP import) → deploy → programmatic SEO pages live
+- [recipes/component-update-and-propagate](skills/recipes/component-update-and-propagate/) — Safe site-wide component change in one call
+- [recipes/component-rollback](skills/recipes/component-rollback/) — Unroll a bad component change
 
 Tier 3 `impl.ts` files use only Node 18+ stdlib (`fetch`, `fs`, `path`) — zero npm dependencies. Copy-paste them into your agent's sandbox and run with `npx tsx impl.ts`. No extra runtime required.
 

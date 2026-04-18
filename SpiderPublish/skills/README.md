@@ -10,12 +10,15 @@ Already exposed via `@spideriq/mcp-publish` as individual MCP tools. These SKILL
 
 | Skill | What it covers |
 |---|---|
-| [content-platform/](content-platform/) | Pages, blog posts (authors/tags/categories), docs, navigation, settings, components, domains |
+| [content-platform/](content-platform/) | Pages, blog posts (authors/tags/categories), docs, navigation, settings, components, domains, **directory pages** (`/directory/{cat}/{city}/{listing}`), component site-wide propagation, section overrides |
+| [booking/](booking/) | **Appointments / bookings** (cal.com-powered). Flow authoring, services, bookings, template library. Ships a `/book/{flow_id}` route and a `{% booking %}` Liquid tag |
 | [templates-engine/](templates-engine/) | Liquid templates, themes, deploy to Cloudflare edge |
-| [upload-host-media/](upload-host-media/) | Image / file / video upload to CDN |
+| [upload-host-media/](upload-host-media/) | Image / file / video upload to CDN — plus `upload_local_file` / `upload_local_directory` for agents with filesystem access |
 | [agentdocs/](agentdocs/) | Versioned documentation projects |
 
 **Blog authoring** lives inside `content-platform/` — see its "Blog authoring workflow" section. The blog tools share the `content_*` namespace with pages, so they don't need a separate skill directory.
+
+**Directory pages** are also under `content-platform/` (shared `directory_*` tool namespace) — see the "Directory pages" section.
 
 ## Recipes
 
@@ -28,6 +31,21 @@ Multi-step workflows composing multiple MCP tools. Each recipe has a full Tier 1
 | [recipes/component-rollback/](recipes/component-rollback/) | Restore a component to an earlier version's content. Creates a new forward version + repoints pages. Pairs with update-and-propagate for undo (v2.88.0+). |
 | [recipes/preview-iteration/](recipes/preview-iteration/) | Safe edit loop: `template_preview` (no state mutation) → browser-check → publish (dry_run → confirm_token). |
 | [recipes/bulk-media-upload/](recipes/bulk-media-upload/) | Upload a local directory of files directly via multipart POST. Kills the pinggy/catbox/serveo tunnel workaround. |
+| [recipes/directory/](recipes/directory/) | Programmatic `/directory/{category}/{city}/{listing}` pages: create category → bulk-upsert listings (or import from IDAP) → deploy. |
+
+## Examples
+
+Copy-paste shell scripts under [examples/](../examples/). Each one uses only the public API + a PAT.
+
+| Example | What it does |
+|---|---|
+| [`examples/booking-flow.sh`](../examples/booking-flow.sh) | Clone a booking archetype, theme it, publish, grab the `/book/{flow_id}` URL |
+| [`examples/directory-bulk-import.sh`](../examples/directory-bulk-import.sh) | Seed a directory category with a JSON array of listings |
+| [`examples/bulk-media-upload.sh`](../examples/bulk-media-upload.sh) | Upload a local directory of files — no tunnel required |
+| [`examples/scroll-sequence.sh`](../examples/scroll-sequence.sh) | Video → scroll-scrubbed hero in one call |
+| [`examples/personalized-landing.sh`](../examples/personalized-landing.sh) | Lead-resolved dynamic landing page with merge tags |
+| [`examples/personalized-outreach.sh`](../examples/personalized-outreach.sh) | End-to-end lead → page → email outreach |
+| [`examples/build-and-deploy.sh`](../examples/build-and-deploy.sh) | Minimal build + deploy scaffold |
 
 ## Tier legend
 
