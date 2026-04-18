@@ -1,0 +1,69 @@
+name: component-rollback
+tier: 2
+description: >
+  Revert a component to an earlier version's content AND repoint every (or selected)
+  consuming page's block — single MCP call gated by one confirm_token. Creates a new
+  forward version so the audit trail stays intact (v1.4.4 is a rollback of v1.4.0).
+
+inputs:
+  slug:
+    type: string
+    required: true
+  target_version:
+    type: string
+    required: true
+    hint: The version to restore. Use content_list_component_versions first to see available versions.
+  bump:
+    type: enum
+    values: [patch, minor, major]
+    default: patch
+    hint: How to bump the NEW version (which receives the old content). Default patch.
+  pages:
+    type: array
+    default: null
+    hint: "null = repoint every consuming page (default). Array of slugs = staged rollback."
+
+one_shot:
+  - id: find_target
+    tool: content_list_component_versions
+    payload:
+      slug: $inputs.slug
+    returns: { versions: [{ version, status, created_at, published_at }] }
+    hint: Identify the known-good version from the history list
+
+  - id: dry_run
+    tool: component_rollback
+    payload:
+      slug: $inputs.slug
+      target_version: $inputs.target_version
+      bump: $inputs.bump
+      pages: $inputs.pages
+      dry_run: true
+    returns: { confirm_token, preview: { current_version, new_version, target_version } }
+
+  - id: human_check
+    manual: true
+    hint: Verify target_version is known-good. If uncertain, use a sandbox client first.
+
+  - id: apply
+    tool: component_rollback
+    payload:
+      slug: $inputs.slug
+      target_version: $inputs.target_version
+      bump: $inputs.bump
+      pages: $inputs.pages
+      confirm_token: $dry_run.confirm_token
+    returns: { component, rollback: { target_version, new_version_is_copy_of }, affected_pages }
+
+outputs:
+  new_version: $apply.component.new_version
+  rolled_back_from: $apply.rollback.target_version
+
+anti_patterns:
+  - DO NOT try to "reset" a version in place — this API always creates a new forward version (immutable history)
+  - DO NOT use component_update_and_propagate with an old content dump as a rollback substitute — the distinct gate action means tools can't cross-use tokens, and the rollback path is more explicit
+  - DO NOT call content_deploy_site_production after rollback unless templates/theme/config also changed
+
+when_not_to_use:
+  - You want to edit the CURRENT version (not restore a previous one) → use component_update_and_propagate
+  - You want to delete a bad version from history → component versions are immutable; use rollback + archive the bad one via content_archive_component
