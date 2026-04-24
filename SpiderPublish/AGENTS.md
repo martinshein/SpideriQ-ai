@@ -113,6 +113,34 @@ Returns the resolved project_name (company_name on the client record) — no mor
 - **Skipping settings** → 400 "Missing: Site Settings"
 - **Skipping theme** → 400 "Missing: Theme / Templates"
 
+### Duplicate page / post / doc / block (2026-04-24)
+
+Cheap primitive that unblocks every "starter content" workflow — fork an existing page as a draft, deep-copy a block in place, re-use a blog post template. The duplicate gets `status='draft'`, fresh UUIDs on every block, and an auto-generated `{slug}-copy[-N]` slug (lowest unused suffix) unless you pass `new_slug`.
+
+```bash
+# MCP
+content_duplicate_page(page_id="...", new_slug="...")     # optional new_slug
+content_duplicate_block(page_id="...", block_id="...", position="after"|"before"|N)
+content_duplicate_post(post_id="...", new_slug="...")
+content_duplicate_doc(doc_id="...", new_slug="...")
+
+# CLI
+spideriq content pages:duplicate <page_id> [--slug <new>]
+spideriq content blocks:duplicate <page_id> <block_id> [--position before|after|N]
+spideriq content posts duplicate <post_id> [--slug <new>]
+spideriq content docs:duplicate <doc_id> [--slug <new>]
+
+# REST
+POST /dashboard/projects/{pid}/content/pages/{page_id}/duplicate
+POST /dashboard/projects/{pid}/content/pages/{page_id}/blocks/{block_id}/duplicate
+POST /dashboard/projects/{pid}/content/posts/{post_id}/duplicate
+POST /dashboard/projects/{pid}/content/docs/{doc_id}/duplicate
+```
+
+**Not gated by `dry_run`/`confirm_token`** — these are net-additive (new draft row), not destructive overwrites. 409 on slug collision when `new_slug` is provided; 404 if the source isn't owned by the caller's tenant. Title gets " (Copy)" appended so the dashboard shows it distinctly.
+
+Runnable example: [examples/duplicate-page.sh](./examples/duplicate-page.sh).
+
 ### Block Types
 `hero`, `features_grid`, `cta_section`, `testimonials`, `pricing_table`, `faq`, `stats_bar`, `rich_text`, `image`, `video_embed`, `code_example`, `logo_cloud`, `comparison_table`, `spacer`, `component`
 

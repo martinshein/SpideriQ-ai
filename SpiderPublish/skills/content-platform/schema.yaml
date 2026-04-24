@@ -1,5 +1,5 @@
 name: content-platform
-version: "2.1.0"
+version: "2.2.0"
 tier: 1
 description: >
   Reference catalog of the SpiderPublish content-platform MCP tools.
@@ -10,6 +10,10 @@ description: >
   v2.1.0 (2026-04-24): added `auth.get_whoami`, `link_audit.content_audit_links`,
   `component_preview.component_preview`, plus `auto_extract_css`, `chrome_auto_skip`,
   and `empty_prop_override` behavior notes. Closes 8 Apr-23 client session reports.
+
+  v2.2.0 (2026-04-24): added `duplicate.*` primitives (`content_duplicate_page` /
+  `_block` / `_post` / `_doc`). Phase A of the template-gallery / section-library /
+  import-adapter follow-on plan. Every later phase composes on these.
 
 tools:
   pages:
@@ -115,6 +119,14 @@ tools:
   component_preview:
     # 2026-04-24: iframe-render a single component in isolation (~100-300ms). Use before full-site deploy.
     - component_preview                # returns {html (Shadow-DOM-wrapped), css, js, custom_element_tag, merged_props, framework?, bundle_url?}
+  duplicate:
+    # 2026-04-24: cheap primitive — fork an existing page/post/doc/block as a draft.
+    # Returns status='draft', fresh UUIDs on every block, auto-generated `{slug}-copy[-N]` slug.
+    # NOT gated by dry_run/confirm_token (net-additive new row, not destructive overwrite).
+    - content_duplicate_page           # body: {new_slug?}; returns the new draft PageResponse
+    - content_duplicate_block          # body: {position?: 'before'|'after'|<int>}; deep-copies one block in place
+    - content_duplicate_post           # body: {new_slug?}; returns new draft PostResponse
+    - content_duplicate_doc            # body: {new_slug?}; copy lives as a sibling under the same parent_id
 
 gated_with_dry_run:
   - content_publish_page

@@ -79,6 +79,30 @@ All dashboard URLs below assume the CLI/MCP auto-injects `/projects/{pid}/` from
    - Review `preview_url` in a browser
    - `POST /dashboard/projects/{pid}/content/deploy/production?confirm_token=cft_...` → live in ~2-5 seconds
 
+## Duplicate page / post / doc / block (2026-04-24)
+
+When you want a starting point that mirrors an existing page, fork it as a draft. Each call returns a new resource with `status='draft'`, fresh UUIDs on every block, and `{slug}-copy[-N]` slug auto-generated unless you pass `new_slug`. Title gets ` (Copy)` appended.
+
+```bash
+# MCP
+content_duplicate_page(page_id="...", new_slug?="...")
+content_duplicate_block(page_id="...", block_id="...", position?: "after" | "before" | <int>)
+content_duplicate_post(post_id="...", new_slug?="...")
+content_duplicate_doc(doc_id="...", new_slug?="...")
+
+# CLI
+spideriq content pages:duplicate <page_id> [--slug new-slug]
+spideriq content blocks:duplicate <page_id> <block_id> [--position after|before|N]
+spideriq content posts duplicate <post_id> [--slug new-slug]
+spideriq content docs:duplicate <doc_id> [--slug new-slug]
+```
+
+NOT gated by `dry_run` / `confirm_token` — duplicating creates a new row, doesn't overwrite state. 409 on slug collision when you provide `new_slug`; 404 if the source isn't in your tenant. Block duplication targets the same page (the new block is inserted at the chosen position; original keeps its place).
+
+Use this primitive for: "make a copy of the homepage and tweak it as the holiday version", "fork a published blog post and rewrite as a follow-up", "duplicate the pricing-grid block on the same page so I have an annual + monthly variant side by side."
+
+Runnable example: [examples/duplicate-page.sh](./examples/duplicate-page.sh).
+
 ## Deploy Requirements (IMPORTANT)
 
 Deploy **rejects** if any of these are missing:
