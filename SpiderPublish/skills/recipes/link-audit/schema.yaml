@@ -1,0 +1,66 @@
+name: link-audit
+tier: 2
+description: >
+  Single-call audit of every internal link across published pages + all
+  navigation menus. Returns broken links with exact tree-position sources
+  and heuristic proposed redirects.
+
+inputs: {}
+
+one_shot:
+  - id: audit
+    tool: content_audit_links
+    payload: {}
+    returns:
+      valid_count: integer
+      broken:
+        - path: "/old-path"
+          source: "page:{slug}/block[N].field"
+          reason: "target_not_found"
+      proposed_redirects:
+        - from: "/old-path"
+          to: "/new-path"
+          status_code: 301
+      known_redirects:
+        - from: "/legacy"
+          to: "/current"
+          status_code: 301
+
+# Follow-up actions — agents decide based on the response
+follow_up:
+  fix_at_source:
+    when: "broken[].source starts with 'page:'"
+    how: "content_update_page(page_slug=<slug>, blocks=<edited blocks>)"
+    note: "The source string decodes as page:{slug}/block[N].{path.to.field}"
+  fix_nav:
+    when: "broken[].source starts with 'navigation:'"
+    how: "content_update_navigation(location=<header|footer|docs_sidebar>, items=<edited items>)"
+  create_redirect:
+    when: "proposed_redirects[] entry matches intent"
+    how: "content_create_redirect(from_path=..., to_path=..., status_code=301)"
+
+scanned_fields:
+  # Which dict keys the walker treats as link-carrying in the blocks/items JSON
+  - url
+  - href
+  - link
+  - to
+  - target_url
+  - destination
+
+skipped_links:
+  - "External (http:// https://)"
+  - "Protocol-relative (//cdn.example.com)"
+  - "mailto:, tel:, javascript:"
+  - "Fragment-only (#section)"
+  - "Empty strings"
+
+normalization:
+  - strip_query_string: true   # /about?utm=x → /about
+  - strip_fragment: true       # /about#team → /about
+  - strip_trailing_slash: true # /about/ → /about (root / preserved)
+  - lowercase: true
+
+see_also:
+  - recipes/preview-iteration
+  - recipes/component-update-and-propagate

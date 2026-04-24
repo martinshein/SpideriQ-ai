@@ -1,0 +1,34 @@
+{
+  "_description": "Reference: canonical page-block shape for `type: 'rich_text'`. Two valid shapes — raw HTML in data.html OR Tiptap JSON in data.content. Added 2026-04-24 after the Unavis report hit a silent-fail with data.text (wrong field name).",
+  "_validated_by": "ContentBlock @model_validator — type='rich_text' REQUIRES data.html or data.content",
+  "_anti_pattern": "{type: 'rich_text', data: {text: '...'}} — returns 422 since 2026-04-24. Pick one of the two shapes below.",
+
+  "_example_html": {
+    "id": "b2-legal",
+    "type": "rich_text",
+    "data": {
+      "html": "<h2>Privacy</h2>\n<p>We don't sell your data.</p>\n<p>Contact: <a href=\"/contact\">privacy@example.com</a></p>"
+    }
+  },
+
+  "_example_tiptap": {
+    "id": "b3-intro",
+    "type": "rich_text",
+    "data": {
+      "content": {
+        "type": "doc",
+        "content": [
+          {
+            "type": "heading",
+            "attrs": { "level": 2 },
+            "content": [{ "type": "text", "text": "Intro" }]
+          },
+          {
+            "type": "paragraph",
+            "content": [{ "type": "text", "text": "Hello from Tiptap JSON." }]
+          }
+        ]
+      }
+    }
+  }
+}

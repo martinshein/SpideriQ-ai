@@ -1,0 +1,16 @@
+{
+  "_description": "Reference: canonical page-block shape for `type: 'component'`. This is NOT a component body — it's the shape to put INSIDE the `blocks[]` array on content_pages. Added 2026-04-24 as the remedy for the block-payload silent-accept bug.",
+  "_validated_by": "ContentBlock @model_validator — type='component' REQUIRES top-level component_slug",
+  "_anti_pattern": "{type: 'component', data: {slug: 'x', props: {...}}} — returns 422 since 2026-04-24. Move `slug` to the top-level `component_slug` field as shown here.",
+
+  "id": "b1-hero",
+  "type": "component",
+  "component_slug": "hero-gradient",
+  "component_version": "1.0.0",
+  "props": {
+    "headline": "Welcome",
+    "subheadline": "Ship in minutes",
+    "cta_text": "Get started",
+    "cta_url": "/signup"
+  }
+}

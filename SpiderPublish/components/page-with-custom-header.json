@@ -1,0 +1,59 @@
+{
+  "_description": "Reference: a page with a custom-header component that auto-suppresses the native `{% section 'header' %}`. Added 2026-04-24 to close the Onyx/Unavis/DanMagi double-chrome reports.",
+  "_how_it_works": "The custom header component must be created with category='header'. The renderer's context-builder inspects the page's blocks and the resolved components; if any block's component has category='header', it sets render_native_header=false so the default theme's {% section 'header' %} is skipped. Same rule for 'footer'. No settings toggle needed.",
+  "_manual_override": "If you want to hide chrome without a matching component, set page.custom_fields = {hide_native_chrome: true} (both) or {hide_native_header: true}/{hide_native_footer: true} (granular).",
+
+  "_step_1_create_header_component": {
+    "_endpoint": "POST /api/v1/dashboard/projects/{pid}/content/components",
+    "slug": "acme-header",
+    "name": "Acme Header",
+    "category": "header",
+    "version": "1.0.0",
+    "html_template": "<header class=\"hdr\">\n  <a class=\"logo\" href=\"/\">{{ props.brand | default: 'Acme' }}</a>\n  <nav>\n    {% for item in props.items %}\n      <a href=\"{{ item.url }}\">{{ item.label }}</a>\n    {% endfor %}\n  </nav>\n</header>",
+    "css": ":host { display: block; position: sticky; top: 0; z-index: 20; background-color: #ffffff; }\n.hdr { display: flex; justify-content: space-between; align-items: center; padding: 1rem 2rem; }\n.logo { font-weight: 700; text-decoration: none; color: var(--heading); }\nnav { display: flex; gap: 1.5rem; }\nnav a { color: var(--body-text); text-decoration: none; }\nnav a:hover { color: var(--primary); }",
+    "default_props": {
+      "brand": "Acme",
+      "items": [
+        { "label": "Home", "url": "/" },
+        { "label": "Pricing", "url": "/pricing" },
+        { "label": "Contact", "url": "/contact" }
+      ]
+    }
+  },
+
+  "_step_2_publish": {
+    "_endpoint": "POST /api/v1/dashboard/projects/{pid}/content/components/{id}/publish",
+    "_note": "Phase 11+12 gated — first call with dry_run=true returns a confirm_token, second call consumes it."
+  },
+
+  "_step_3_create_page_using_it": {
+    "_endpoint": "POST /api/v1/dashboard/projects/{pid}/content/pages",
+    "slug": "home",
+    "title": "Acme — Home",
+    "template": "default",
+    "blocks": [
+      {
+        "id": "b1-header",
+        "type": "component",
+        "component_slug": "acme-header",
+        "component_version": "1.0.0"
+      },
+      {
+        "id": "b2-hero",
+        "type": "component",
+        "component_slug": "hero-gradient",
+        "props": { "headline": "Build something" }
+      },
+      {
+        "id": "b3-footer",
+        "type": "component",
+        "component_slug": "acme-footer",
+        "component_version": "1.0.0"
+      }
+    ],
+    "custom_fields": {
+      "_note": "You only need these if you DON'T have a matching category='header'|'footer' component. Auto-detect handles the common case.",
+      "hide_native_chrome": false
+    }
+  }
+}

@@ -38,6 +38,24 @@ Multi-tenant content management: pages, blog posts, docs, navigation, site setti
 | Programmatic directory pages | `directory_create_category` → `directory_bulk_upsert_listings` (or `directory_import_from_idap`) → deploy |
 | Upload local files without a public URL | `upload_local_file(path)` or `upload_local_directory(dir)` — the MCP reads the filesystem directly |
 | "What tool do I reach for?" | `content_get_playbook(intent)` — returns the canonical tool-call sequence for 30+ common intents |
+| Confirm which project my PAT is bound to | `get_whoami()` — returns `{client_id, project_name, email, scopes, token_expires_at, ...}` |
+| Find broken internal links before deploy | `content_audit_links()` — returns `broken[{path, source, reason}]` + `proposed_redirects` |
+| Preview a single component without deploying | `component_preview(component_id, props, viewport?)` — returns Shadow-DOM-wrapped HTML ready for `<iframe srcdoc>` |
+| Port a Tilda/Webflow HTML section with inline `<style>` blocks | `content_create_component(..., auto_extract_css=true)` — server moves `<style>` into `css` field automatically |
+| Page with a custom header component (avoid double-chrome) | Mark the component with `category="header"` — renderer auto-suppresses the native section |
+
+## Apr 2026 additions (v2.1.0)
+
+| Tool | Purpose |
+|---|---|
+| `get_whoami` | Returns current PAT's resolved identity (`client_id`, `project_name`, scopes, expiry). Run before any destructive op to confirm you're in the right tenant. |
+| `content_audit_links` | Walks every published page's blocks + all nav menus. Flags `/path` references that don't resolve to a published page/post or an active redirect. Returns exact tree-position sources (`page:home/block[2].cta_primary.url`) for targeted fixes. |
+| `component_preview` | `POST /dashboard/projects/{pid}/content/components/{id}/preview` with `{props, viewport?}` returns Shadow-DOM-wrapped `html` + `css` + `js` + `merged_props` for iframe-srcdoc rendering. ~100–300ms vs 60–90s full-site deploy. |
+| `auto_extract_css` (flag on `content_create_component` / `content_update_component`) | Moves every inline `<style>...</style>` block from `html_template` into `css` before the loud-error validator fires. Off by default — opt-in for bulk Tilda/Webflow ports. |
+| Chrome auto-skip (behavior change) | Components tagged `category="header"` or `"footer"` auto-suppress the matching native `{% section %}`. No more double-chrome workarounds. |
+| Empty-string prop override (behavior change) | `{% component %}` tag now drops empty-string/null values after the `default_props ← blockProps` merge, so `props.image=""` correctly suppresses a default placeholder. |
+
+Additional 401 error codes for PATs: `token_expired` (distinguishable from generic `token_invalid`), with `expires_at` + regen URL in the response body. See [LEARNINGS.md](../../LEARNINGS.md) "Apr 2026 Triage" section.
 
 ## Blog authoring workflow
 

@@ -100,6 +100,27 @@ Deploy **rejects** if any of these are missing:
 | `409` + `TokenConsumed` | Token already used once (single-use) | Issue a fresh one via `dry_run=true` |
 | `410` + `TokenExpired` | Past `expires_at` (default 7 days) | Issue a fresh one |
 
+### PAT Auth Errors (2026-04-24)
+
+Distinguishable from the confirm-token errors above. Response body is `{"detail": {"error": "<code>", "message": "...", "expires_at"?: "..."}}`.
+
+| Status | `error` code | What it means |
+|---|---|---|
+| `401` | `token_expired` | Your PAT passed `expires_at`. Body includes `expires_at` + regen URL. Run `spideriq auth request --email <admin>` or go to `https://app.spideriq.ai/settings/tokens`. |
+| `401` | `token_invalid` | PAT is unknown or malformed. Check `~/.spideriq/credentials.json`. |
+
+### `whoami` — confirm project binding before deploying
+
+```bash
+curl -H "Authorization: Bearer $SPIDERIQ_PAT" https://spideriq.ai/api/v1/auth/whoami
+# → {authenticated, auth_type, client_id, project_name, email, scopes, token_expires_at, ...}
+
+# Or via CLI:
+npx @spideriq/cli auth whoami
+```
+
+`project_name` is the company name on the client record — quickest way to verify you're about to mutate the right tenant.
+
 ## Common Mistakes
 
 | Mistake | What Happens | Fix |
@@ -202,6 +223,65 @@ content_deploy_preview() → content_deploy_production(confirm_token)
 content_apply_layout_preset({ preset: "default" | "blank" | "landing" })
   → uploads a canned layout/theme.liquid override
 ```
+
+### Chrome auto-skip (2026-04-24) — simpler for per-page custom header/footer
+
+If a page has a block whose component has `category: "header"` (or `"footer"`), the renderer now **automatically suppresses** the native `{% section 'header' %}` (or `'footer'`) for that page. You get one chrome per page, no double-render, no `template='blank'` fallback.
+
+```bash
+# Mark your custom header component:
+POST /dashboard/projects/{pid}/content/components
+{ "slug": "acme-header", "category": "header", "html_template": "...", "css": "..." }
+
+# Use it in a page block — native header auto-suppressed:
+{ "slug": "home", "blocks": [{"id":"b1","type":"component","component_slug":"acme-header"}, ...]}
+```
+
+Prefer this over `content_override_section` when the header/footer should vary per-page. Prefer `content_override_section` when it's a site-wide design change (darker style, different logo placement, etc.).
+
+**Manual override** — rides on the existing `custom_fields` JSONB on `content_pages`:
+
+```json
+{ "custom_fields": {"hide_native_chrome": true} }
+// granular:
+{ "custom_fields": {"hide_native_header": true, "hide_native_footer": false} }
+```
+
+### Default background is dark — override via settings
+
+`--surface` defaults to `#0A0A0B` (Tailwind `slate-950`). Components without an explicit `:host { background-color: ... }` render invisible on a light-themed design. Two fixes:
+
+1. **Site-wide light theme:** set `surface_color: "#ffffff"` via Theme Palette above. Every component's `:host` inherits `var(--surface)`.
+2. **Per-component background:** always declare `:host { background-color: ... }` in the component's `css` field. Required for any component that might appear on a light or mixed-surface site.
+
+Also: `font-family` does NOT inherit into the Shadow DOM root. Declare it in the component's `css` or rely on the theme CSS variables injected into `:host` by the renderer.
+
+### Empty-string props now suppress `default_props` (2026-04-24)
+
+Passing `props.image: ""` on a page block now correctly overrides `default_props.image: "/placeholder.jpg"`. Falsy-but-meaningful values (`0`, `false`) are preserved — the filter only drops empty strings and `null`.
+
+### Preview a single component in isolation (2026-04-24)
+
+Before a full-site deploy, render one component standalone for quick Shadow DOM / layout checks (~100–300 ms):
+
+```bash
+POST /dashboard/projects/{pid}/content/components/{component_id}/preview
+{ "props": { "headline": "Hello" }, "viewport": "desktop" }
+# → { html, css, js, custom_element_tag, merged_props, framework?, bundle_url? }
+```
+
+Drop the returned `html` into an `<iframe srcdoc="...">`. Full recipe: [examples/preview-component.sh](examples/preview-component.sh).
+
+### Audit internal links before deploy (2026-04-24)
+
+Walks every published page's blocks + all navigation menus; compares `/path` references against published pages/posts + active redirects:
+
+```bash
+GET /dashboard/projects/{pid}/content/audit/links
+# → { valid_count, broken: [{path, source, reason}], proposed_redirects, known_redirects }
+```
+
+`source` = exact tree position (e.g. `page:home/block[2].cta_primary.url`). Runnable: [examples/audit-links.sh](examples/audit-links.sh). Recipe: [skills/recipes/link-audit/](skills/recipes/link-audit/).
 
 | Preset | What it produces |
 |---|---|

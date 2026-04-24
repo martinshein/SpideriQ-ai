@@ -4,7 +4,9 @@
 
 Build websites, blogs, landing pages, and personalized outreach pages — entirely through AI agents. No browser needed. Deploy to Cloudflare's edge in 2-5 seconds.
 
-**Current versions:** `@spideriq/cli@0.8.3`, `@spideriq/mcp-publish@0.1.0`, `@spideriq/core@0.8.3` — **87 tools** (the atomic SpiderPublish slice: pages, posts, docs, templates, components, domains, media + shared auth/system). Prefer this over the 157-tool kitchen-sink `@spideriq/mcp` — some IDE/LLM stacks silently drop tool injections above ~128 tools, and every tool schema burns LLM context on every turn.
+**Current versions:** `@spideriq/cli@1.0.0`, `@spideriq/mcp-publish@1.0.0`, `@spideriq/core@1.0.0` — **105+ tools** (the atomic SpiderPublish slice: pages, posts, docs, templates, components, domains, media, directory, component propagation, section overrides, local upload, link audit, component preview, `whoami`). Prefer this over the kitchen-sink `@spideriq/mcp@1.0.0` — some IDE/LLM stacks silently drop tool injections above ~128 tools, and every tool schema burns LLM context on every turn.
+
+**New (Apr 2026):** block-payload validator now 422s the common `{type:'component', data:{slug}}` anti-pattern, `/auth/whoami` confirms your project binding, `content_audit_links` catches broken internal links before deploy, `component_preview` iframes a single component in ~100-300 ms, `auto_extract_css` rescues Tilda/Webflow inline `<style>` blocks, custom `category='header'|'footer'` components auto-suppress native chrome. See [LEARNINGS.md → Apr 2026 Triage](./LEARNINGS.md#apr-2026-triage).
 
 ## Quick Start (2 minutes)
 
@@ -92,11 +94,41 @@ SpiderPublish/
 │   ├── pricing-cards.json             # Tier 1: 3-tier pricing table
 │   ├── faq-accordion.json             # Tier 2: interactive FAQ
 │   ├── stats-animated.json            # Tier 3: GSAP animated counters
-│   └── pricing-toggle.json            # Tier 4: React monthly/annual toggle
+│   ├── pricing-toggle.json            # Tier 4: React monthly/annual toggle
+│   ├── scroll-sequence.json           # REF: scroll-hero page-block config
+│   ├── block-component.json           # REF: canonical type='component' block shape
+│   ├── block-rich-text.json           # REF: type='rich_text' data.html vs data.content
+│   └── page-with-custom-header.json   # REF: chrome auto-skip when a block is category='header'
 └── examples/                          # Full workflow examples
     ├── build-and-deploy.sh            # cURL-based site build (project-scoped URLs + confirm_token flow)
-    └── personalized-outreach.sh       # Dynamic landing page setup
+    ├── personalized-outreach.sh       # Dynamic landing page setup
+    ├── scroll-sequence.sh             # Scroll-linked hero via extract_frames + sys-scroll-sequence
+    ├── bulk-media-upload.sh           # Local dir → SpiderMedia (no tunnels)
+    ├── directory-bulk-import.sh       # Programmatic SEO directory from IDAP data
+    ├── booking-flow.sh                # Cal.com-backed appointments
+    ├── personalized-landing.sh        # End-to-end personalized landing with merge tags
+    ├── check-auth.sh                  # whoami + token_expired / token_invalid branching
+    ├── audit-links.sh                 # content_audit_links — find broken internal links
+    ├── preview-component.sh           # Iframe-render a single component for Shadow DOM checks
+    ├── tilda-migrate-css.sh           # auto_extract_css one-file import
+    └── tilda-migrate.sh               # End-to-end: section → component → page → publish
 ```
+
+## Where to Start
+
+| If you want to… | Read |
+|---|---|
+| Build a site from scratch | [AGENTS.md → Build a Site](./AGENTS.md#build-a-site-follow-all-steps) |
+| Port a Tilda / Webflow / Lovable site | [skills/recipes/tilda-migration/](./skills/recipes/tilda-migration/) · [examples/tilda-migrate.sh](./examples/tilda-migrate.sh) |
+| Verify your PAT + which project it's bound to | [examples/check-auth.sh](./examples/check-auth.sh) · `npx @spideriq/cli auth whoami` |
+| Find broken internal links before deploy | [skills/recipes/link-audit/](./skills/recipes/link-audit/) · [examples/audit-links.sh](./examples/audit-links.sh) |
+| Preview a single component without a full deploy | [examples/preview-component.sh](./examples/preview-component.sh) |
+| Avoid double headers when shipping custom chrome | Mark your header component `category: "header"` — see [components/page-with-custom-header.json](./components/page-with-custom-header.json) |
+| Understand why `{type:'component', data:{slug}}` fails | [components/block-component.json](./components/block-component.json) · [LEARNINGS.md → Apr 2026 Triage](./LEARNINGS.md#apr-2026-triage) |
+| Roll out a shared-component change in one call | [skills/recipes/component-update-and-propagate/](./skills/recipes/component-update-and-propagate/) |
+| Undo a bad component change | [skills/recipes/component-rollback/](./skills/recipes/component-rollback/) |
+| Ship a scroll-linked hero from a video | [skills/recipes/scroll-sequence/](./skills/recipes/scroll-sequence/) |
+| Build a programmatic directory (category / city / listing) | [skills/recipes/directory/](./skills/recipes/directory/) |
 
 ## How It Works
 
