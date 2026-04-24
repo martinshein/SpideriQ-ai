@@ -77,6 +77,29 @@ Deploy **rejects** if any blocking item is missing. Always call `content_deploy_
 | `409 TokenConsumed` | Single-use token already used | Issue a fresh one |
 | `410 TokenExpired` | Past expires_at (7 days) | Issue a fresh one |
 
+### PAT Auth Errors (2026-04-24)
+
+Distinguishable from the confirm-token errors above. Body is `{"detail": {"error": "<code>", "message": "...", "expires_at"?: "..."}}`.
+
+| Status | `error` code | What it means |
+|---|---|---|
+| `401` | `token_expired` | Your PAT passed `expires_at`. Body includes `expires_at` + a link to regenerate. Run `spideriq auth request --email <admin>` or visit `https://app.spideriq.ai/settings/tokens`. |
+| `401` | `token_invalid` | PAT is unknown/malformed. Check `~/.spideriq/credentials.json` or re-auth. |
+| `401` | (no `error` field) | Legacy path — still supported but agents should treat as `token_invalid`. |
+
+### `whoami` — check your binding (2026-04-24)
+
+Before a destructive deploy, confirm which project your PAT is bound to:
+
+```bash
+curl -H "Authorization: Bearer $SPIDERIQ_PAT" https://spideriq.ai/api/v1/auth/whoami
+# → {authenticated, auth_type, client_id, project_name, email, role, scopes, token_expires_at, token_id, session_binding}
+# Or via CLI:
+npx @spideriq/cli auth whoami
+```
+
+Returns the resolved project_name (company_name on the client record) — no more trial-and-error API calls to figure out which workspace a token belongs to.
+
 ### Common Mistakes
 
 - **Forget `spideriq use`** → every call carries `Deprecation: true` header; will 410 after 2026-05-14
@@ -92,6 +115,36 @@ Deploy **rejects** if any blocking item is missing. Always call `content_deploy_
 
 ### Block Types
 `hero`, `features_grid`, `cta_section`, `testimonials`, `pricing_table`, `faq`, `stats_bar`, `rich_text`, `image`, `video_embed`, `code_example`, `logo_cloud`, `comparison_table`, `spacer`, `component`
+
+### Block Payload Schema (strict since 2026-04-24)
+
+Every block in `content_pages.blocks[]` has this canonical shape:
+
+```json
+{
+  "id": "required unique string (UUID recommended)",
+  "type": "one of the BlockType values above",
+  "data": { /* type-specific; see below */ },
+  "component_slug": "REQUIRED when type='component' (top-level, NOT data.slug)",
+  "component_version": "optional pinned version; omit for latest published",
+  "props": { /* optional dict passed to the component template */ }
+}
+```
+
+**Type-specific `data` requirements:**
+
+- `type: "component"` → MUST set `component_slug` at the block's top level.
+  Reference JSON: [components/block-component.json](components/block-component.json).
+- `type: "rich_text"` → MUST set `data.html` (raw HTML string) OR `data.content` (Tiptap JSON).
+  Reference JSON: [components/block-rich-text.json](components/block-rich-text.json).
+- Native-typed blocks (`hero`, `features_grid`, etc.) → `data` carries the block's own fields.
+
+**Anti-patterns now rejected with 422** (used to silently 200 OK + render blank):
+
+- `{type: "component", data: {slug: "...", props: {}}}` — move `slug` to the top-level `component_slug` field. The error message names `data.slug` and points to the fix.
+- `{type: "rich_text", data: {text: "..."}}` — use `data.html` or `data.content`.
+- Unknown fields on `POST/PATCH /components` (like `css_styles` instead of `css`) — the response returns 200 with a `warnings[]` array listing each ignored field + a "Did you mean X?" hint. Check the response body.
+- Slug with `/` (e.g. `product/xyz`) — rejected at creation; use flat slugs like `product-xyz`. Nested doc paths use `parent_id` chains.
 
 ### Page Templates
 `default` (header + footer), `landing` (full-bleed main), `blank` (no chrome at all — full canvas), `dynamic_landing` (/lp/ routes with lead data). Unknown values fall back to `default`.
@@ -214,6 +267,74 @@ Reads: `booking_list(business_id, status?, since?)`, `booking_get(booking_id)`. 
 GET /api/v1/idap/businesses?limit=20&include=emails&format=yaml
 GET /api/v1/idap/businesses/resolve?place_id=0x47e66fdad6f1cc73:0x341211b3fccd79e1
 ```
+
+### Chrome auto-skip (2026-04-24)
+
+When a page has a block that resolves to a component with `category='header'` OR `category='footer'`, the renderer now **automatically suppresses the native `{% section 'header' %}` / `'footer'`** so you don't get double chrome. Replaces three workarounds:
+
+- Polling `nukeUI()` JS that hid native elements on setInterval
+- Forcing every page to `template='blank'` and losing the layout wrapper
+- Per-page conditional `copyright_text` scripts
+
+**How to opt in:** mark your custom header/footer components with `category: "header"` or `category: "footer"` on create/update. The auto-detect fires on every page render — no settings toggle needed.
+
+**Manual override** via the existing `custom_fields` JSONB on `content_pages` (no migration needed):
+
+```json
+{"custom_fields": {"hide_native_chrome": true}}
+// granular:
+{"custom_fields": {"hide_native_header": true, "hide_native_footer": false}}
+```
+
+Reference JSON: [components/page-with-custom-header.json](components/page-with-custom-header.json).
+
+### Empty-string props now suppress defaults (2026-04-24)
+
+Page block `props.image = ""` now correctly overrides a component's `default_props.image = "/placeholder.jpg"`. Before: LiquidJS treated `""` as truthy for `{% if props.image %}` checks, so the placeholder kept rendering. Fix: the renderer's `{% component %}` tag deletes empty-string / null props after the merge, so the Liquid template sees `props.image == nil` (falsy) and correctly falls through. Falsy-but-meaningful values (`0`, `false`) are preserved.
+
+### Preview a single component in isolation (2026-04-24)
+
+Before a full-site deploy, iframe-render one component to check Shadow DOM styling:
+
+```bash
+POST /api/v1/dashboard/projects/{pid}/content/components/{component_id}/preview
+{ "props": { "headline": "Hello" }, "viewport": "desktop" }
+# → { html, css, js, custom_element_tag, merged_props, framework?, bundle_url? }
+```
+
+The `html` is the full `<spideriq-cmp data-slug="...">` block with a declarative `<template shadowrootmode="open">` inside — drop it into `<iframe srcdoc="...">` and you have a pixel-accurate preview in ~100–300 ms instead of a 60–90 s site deploy. Full-fidelity preview still ships via `content_deploy_site_preview`.
+
+Runnable example: [examples/preview-component.sh](examples/preview-component.sh).
+
+### Audit internal links before deploy (2026-04-24)
+
+One call validates every `/path` in every page's blocks + all navigation menus against the published-page roster + active redirects:
+
+```bash
+GET /api/v1/dashboard/projects/{pid}/content/audit/links
+# → { valid_count, broken: [{path, source, reason}], proposed_redirects, known_redirects }
+```
+
+`source` strings describe the exact tree position (`page:home/block[2].cta_primary.url`, `navigation:header[3].url`) so you can navigate straight to the fix. `proposed_redirects` offers a 301 when a broken path's suffix matches an existing slug.
+
+Runnable example: [examples/audit-links.sh](examples/audit-links.sh) · Full recipe: [skills/recipes/link-audit/](skills/recipes/link-audit/).
+
+### Tilda / Webflow import — `auto_extract_css` escape hatch (2026-04-24)
+
+By default the server rejects `<style>` blocks inside `html_template` (loud error — Shadow DOM ignores them). For Tilda/Webflow imports whose HTML is saturated with inline styles, pass `auto_extract_css: true` on `component_create` / `component_update` and the server will move every `<style>...</style>` block into the `css` field before validation.
+
+```bash
+POST /api/v1/dashboard/projects/{pid}/content/components
+{
+  "slug": "legacy-section",
+  "name": "Ported Section",
+  "html_template": "<style>.foo{color:red}</style><section>...",
+  "auto_extract_css": true
+}
+# → server returns the normal ComponentResponse; html_template is clean, css has the rules.
+```
+
+Off by default — the explicit-over-magical contract for hand-authored components stays. Runnable example: [examples/tilda-migrate-css.sh](examples/tilda-migrate-css.sh) · Full recipe: [skills/recipes/tilda-migration/](skills/recipes/tilda-migration/).
 
 ---
 
@@ -352,6 +473,8 @@ Multi-step workflows that compose MCP tools. Live at **[skills/](skills/)** in t
 - [recipes/directory](skills/recipes/directory/) — Category → bulk-upsert listings (or IDAP import) → deploy → programmatic SEO pages live
 - [recipes/component-update-and-propagate](skills/recipes/component-update-and-propagate/) — Safe site-wide component change in one call
 - [recipes/component-rollback](skills/recipes/component-rollback/) — Unroll a bad component change
+- [recipes/link-audit](skills/recipes/link-audit/) — Find broken internal links across pages + nav before deploy (2026-04-24)
+- [recipes/tilda-migration](skills/recipes/tilda-migration/) — Port a Tilda site with `auto_extract_css` + flat slugs + `category='header'|'footer'` components (2026-04-24)
 
 Tier 3 `impl.ts` files use only Node 18+ stdlib (`fetch`, `fs`, `path`) — zero npm dependencies. Copy-paste them into your agent's sandbox and run with `npx tsx impl.ts`. No extra runtime required.
 

@@ -2,6 +2,34 @@
 
 Things that cause silent failures or broken deploys. Read before building.
 
+## Apr 2026 Triage — 5 silent-failure modes now caught (2026-04-24)
+
+Consolidated from 8 agent session reports across 6 live projects. Half were silent-accept bugs (200 OK + blank page); half were opaque defaults. All fixed.
+
+| Gotcha | What Happened | Fix (now live) |
+|---|---|---|
+| **Block payload silent-accept:** `{type: "component", data: {slug: "x", props: {...}}}` returned 200 OK but rendered blank | `component_slug` lives at the block's top level, not under `data`. The Liquid renderer's `{% component %}` tag read `block.component_slug` and got `undefined`. | Now returns `422` with a hint: `block[id=...] type='component' requires top-level component_slug (received data.slug='x' — move it to the top-level component_slug field)`. Reference JSON: [`components/block-component.json`](components/block-component.json). |
+| **`rich_text` block with `data: {text: "..."}`** silently rendered empty | Template expects `data.html` (raw HTML) OR `data.content` (Tiptap JSON). `text` isn't a recognized field. | Now returns `422` naming the two valid shapes. Reference JSON: [`components/block-rich-text.json`](components/block-rich-text.json). |
+| **Unknown fields** on `POST/PATCH /components` (e.g. `css_styles` instead of `css`) silently dropped | Pydantic's `extra='ignore'` default — unknown keys went straight to `/dev/null` | Now returns 200 OK with a `warnings[]` array in the response body: `Unknown field 'css_styles' was ignored. Did you mean 'css'?`. Two-layer match: substring-contains first, difflib fallback. |
+| **Slug with `/` in it** (e.g. `product/pillowcase`) accepted at creation, then silently 404'd at serve time | The renderer's route matcher lost nested slugs to `/directory/*` regex precedence OR URL-encoding edge cases | Now returns `422` at creation. Use flat slugs (`product-pillowcase`). Nested doc paths use `parent_id` chains, not `/` in the slug. |
+| **Dark body leaks into components** — first content component appears invisible | `--surface` CSS variable defaults to `#0A0A0B` (Tailwind `slate-950`). Every component without an explicit `:host { background-color }` renders invisible on a light-themed site. | Two fixes: (a) site-wide light theme via `content_update_settings({surface_color: "#ffffff", ...})` (see Theme Palette in AGENTS.md), (b) every content component should declare `:host { background-color: ... }` explicitly. Bonus: `font-family` doesn't inherit into Shadow DOM either — declare it in `css`. |
+
+### Session-level tooling gains (2026-04-24)
+
+| Capability | How |
+|---|---|
+| **Confirm your project binding** before a destructive deploy | `GET /api/v1/auth/whoami` or `npx @spideriq/cli auth whoami` → returns `{client_id, project_name, email, scopes, token_expires_at, ...}`. `project_name` is the client's company name on the record. |
+| **Distinguish expired from invalid PAT** | 401 response body now structured: `{"detail": {"error": "token_expired" \| "token_invalid", "expires_at"?, "message"}}`. Expired variant includes regen URL. |
+| **Preview a single component in isolation** | `POST /dashboard/projects/{pid}/content/components/{id}/preview` returns `{html, css, js, merged_props}` ready for iframe-srcdoc. ~100-300ms vs 60-90s full-site deploy. |
+| **Audit internal links before deploy** | `GET /dashboard/projects/{pid}/content/audit/links` walks every published page's blocks + nav menus, returns `{valid_count, broken: [{path, source, reason}], proposed_redirects}`. `source` strings pinpoint the exact tree position (`page:home/block[2].cta_primary.url`). |
+| **Chrome auto-skip** when a custom header/footer component is present | Mark the component with `category: "header"` or `"footer"` on create. Renderer suppresses the matching native `{% section %}` automatically. No more double-chrome, no `template='blank'` fallback. Manual override via `page.custom_fields.hide_native_chrome: true`. |
+| **Empty-string props now suppress default_props** | `props: {image: ""}` on a page block now correctly overrides `default_props.image = "/placeholder.jpg"`. Falsy-but-meaningful values (`0`, `false`) preserved. |
+| **Tilda / Webflow `<style>` extraction** — opt-in | Pass `auto_extract_css: true` on `component_create` / `component_update` and the server moves every inline `<style>...</style>` block into the `css` field before validation. Off by default (loud-error contract for hand-authored components). |
+
+Recipes:
+- [skills/recipes/link-audit/](skills/recipes/link-audit/) — full audit + proposed-redirect workflow
+- [skills/recipes/tilda-migration/](skills/recipes/tilda-migration/) — end-to-end Tilda port using `auto_extract_css` + flat slugs + `category='header'|'footer'` components
+
 ## Multi-Tenant Safety (Phase 11+12) — New
 
 | Gotcha | What Happens | Fix |

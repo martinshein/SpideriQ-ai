@@ -1,11 +1,15 @@
 name: content-platform
-version: "2.0.0"
+version: "2.1.0"
 tier: 1
 description: >
   Reference catalog of the SpiderPublish content-platform MCP tools.
   Each entry names the tool, its category, and a one-line use case.
   The canonical JSON Schema for each tool lives in `@spideriq/mcp-publish` —
   this file is human/agent reading. Matches `@spideriq/mcp-publish@1.0.0`.
+
+  v2.1.0 (2026-04-24): added `auth.get_whoami`, `link_audit.content_audit_links`,
+  `component_preview.component_preview`, plus `auto_extract_css`, `chrome_auto_skip`,
+  and `empty_prop_override` behavior notes. Closes 8 Apr-23 client session reports.
 
 tools:
   pages:
@@ -102,6 +106,15 @@ tools:
     # Direct local-file upload path (no public URL required) for agents with filesystem access.
     - upload_local_file
     - upload_local_directory
+  auth:
+    # 2026-04-24: confirm which tenant your PAT is bound to before destructive ops.
+    - get_whoami                       # returns {client_id, project_name, email, scopes, token_expires_at, ...}
+  link_audit:
+    # 2026-04-24: walks every published page's blocks + nav menus, validates internal links.
+    - content_audit_links              # returns {valid_count, broken[{path, source, reason}], proposed_redirects, known_redirects}
+  component_preview:
+    # 2026-04-24: iframe-render a single component in isolation (~100-300ms). Use before full-site deploy.
+    - component_preview                # returns {html (Shadow-DOM-wrapped), css, js, custom_element_tag, merged_props, framework?, bundle_url?}
 
 gated_with_dry_run:
   - content_publish_page
@@ -136,6 +149,38 @@ propagation_workflow:
   preview_first: true               # dry_run=true returns affected_pages + confirm_token
   safety_pair: component_rollback   # if propagation breaks something, rollback undoes it in one call
 
+auto_extract_css:
+  # 2026-04-24: opt-in flag on component_create / component_update for Tilda/Webflow imports
+  # whose HTML is saturated with inline <style> blocks. Off by default to preserve the
+  # explicit-over-magical contract for hand-authored components.
+  applies_to: [content_create_component, content_update_component]
+  default: false
+  behavior: >
+    When true, the server regex-extracts every <style>...</style> block from html_template
+    and appends the contents to the css field before the loud-error inline-style validator
+    runs. Agents get a clean html_template + a consolidated css, in one call.
+
+chrome_auto_skip:
+  # 2026-04-24: if a page block resolves to a component with category='header' (or 'footer'),
+  # the renderer auto-suppresses the native {% section 'header' %} / 'footer'. No more
+  # double-chrome workarounds (nukeUI polling, template='blank', conditional copyright_text).
+  triggered_by:
+    - "component.category == 'header' → native header section skipped"
+    - "component.category == 'footer' → native footer section skipped"
+  manual_override:
+    field: content_pages.custom_fields
+    shape:
+      hide_native_chrome: true       # suppresses both
+      hide_native_header: true       # granular
+      hide_native_footer: true       # granular
+
+empty_prop_override:
+  # 2026-04-24: the {% component %} tag now deletes empty-string / null props AFTER the
+  # default_props ← blockProps merge, so `props.image = ""` correctly suppresses
+  # `default_props.image = "/placeholder.jpg"`. Falsy-but-meaningful values (0, false)
+  # are preserved.
+  semantic: "block.props empty-string falls through to default_props being nil"
+
 canonical_see_also:
   - templates-engine
   - upload-host-media
@@ -145,3 +190,5 @@ canonical_see_also:
   - recipes/directory
   - recipes/component-update-and-propagate
   - recipes/component-rollback
+  - recipes/link-audit
+  - recipes/tilda-migration

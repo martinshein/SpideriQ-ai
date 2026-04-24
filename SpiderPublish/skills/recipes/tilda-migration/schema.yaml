@@ -1,0 +1,120 @@
+name: tilda-migration
+tier: 2
+description: >
+  End-to-end port of a Tilda (or Webflow / Lovable / hand-coded) site to
+  SpiderPublish Shadow-DOM components. Uses the opt-in auto_extract_css flag
+  so inline <style> blocks don't blow up, flat-slug regex so pages route
+  correctly, and category='header'|'footer' components so native chrome
+  auto-suppresses.
+
+inputs:
+  html_file:
+    type: string
+    required: true
+    hint: Path to a single HTML section file (hero, features, CTA, …).
+  component_slug:
+    type: string
+    required: true
+    hint: "Flat slug. ^[a-z0-9][a-z0-9-]*$ — no slashes."
+  component_name:
+    type: string
+    required: true
+  component_category:
+    type: string
+    default: custom
+    hint: "Mark header components 'header' / footers 'footer' for auto-skip; otherwise 'custom' is fine."
+  page_slug:
+    type: string
+    required: true
+    hint: Flat slug for the page that will reference this component.
+
+# ============================================================
+# Per-section flow (loop this over every HTML export file)
+# ============================================================
+steps:
+  - id: create_component
+    tool: content_create_component
+    payload:
+      slug: $inputs.component_slug
+      name: $inputs.component_name
+      category: $inputs.component_category
+      html_template: "<file:$inputs.html_file>"
+      auto_extract_css: true          # <-- key flag; moves <style> blocks to css field
+    returns: { id, version }
+
+  - id: publish_dry_run
+    tool: content_publish_component
+    payload:
+      component_id: $create_component.id
+      dry_run: true
+    returns: { confirm_token }
+
+  - id: publish_confirm
+    tool: content_publish_component
+    payload:
+      component_id: $create_component.id
+      confirm_token: $publish_dry_run.confirm_token
+
+  - id: create_or_append_page_block
+    # If the target page already exists: content_update_page to append.
+    # Otherwise content_create_page.
+    note: "Block shape is STRICT since 2026-04-24 — component_slug at the block's top level, not data.slug."
+    block_shape:
+      id: "b1-$inputs.component_slug"
+      type: component
+      component_slug: $inputs.component_slug
+      component_version: $create_component.version
+      props: {}
+
+  - id: publish_page
+    tool: content_publish_page
+    payload:
+      page_slug: $inputs.page_slug
+      dry_run: true
+    returns: { confirm_token }
+    then_consume: true
+
+# ============================================================
+# Post-migration site-wide actions
+# ============================================================
+after_all_sections:
+  - id: deploy_preview
+    tool: content_deploy_site_preview
+    returns: { preview_url, confirm_token }
+
+  - id: deploy_production
+    tool: content_deploy_site_production
+    payload:
+      confirm_token: $deploy_preview.confirm_token
+
+  - id: final_link_audit
+    tool: content_audit_links
+    returns: { broken, proposed_redirects }
+    note: "Create content_redirect rows for legacy paths you want to preserve."
+
+# ============================================================
+# Known traps (all return 422 at the API since 2026-04-24)
+# ============================================================
+anti_patterns:
+  block_payload_bad:
+    wrong: "{type: 'component', data: {slug: 'x', props: {...}}}"
+    right: "{type: 'component', component_slug: 'x', props: {...}}"
+    note: "component_slug must be at the block's top level."
+  rich_text_bad:
+    wrong: "{type: 'rich_text', data: {text: '...'}}"
+    right: "{type: 'rich_text', data: {html: '<p>...</p>'}}  OR  {type: 'rich_text', data: {content: <Tiptap JSON>}}"
+  nested_slug_bad:
+    wrong: "slug: 'product/pillowcase'"
+    right: "slug: 'product-pillowcase'"
+    note: "Nested doc paths use parent_id chains, not / in slugs."
+  inline_style_without_flag:
+    wrong: "html_template with <style>...</style> AND auto_extract_css not set"
+    right: "Pass auto_extract_css: true  OR  move <style> content to the css field manually"
+  double_chrome:
+    wrong: "Build a custom header + leave category='custom' → native header renders on top"
+    right: "Create header with category='header' — renderer auto-suppresses native section"
+
+see_also:
+  - recipes/bulk-media-upload
+  - recipes/component-update-and-propagate
+  - recipes/link-audit
