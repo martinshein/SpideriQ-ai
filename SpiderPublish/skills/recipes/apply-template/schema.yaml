@@ -1,0 +1,140 @@
+name: apply-template
+tier: 2
+description: >
+  Bootstrap a tenant from a SpiderIQ-curated starter site (saas-landing,
+  agency-portfolio, restaurant, ...). Clones published pages as drafts,
+  copies header/footer nav, writes whitelisted settings keys, all in a
+  single Phase 11+12 dry_run → confirm_token call. Cloned pages land as
+  status='draft'; publishing is a separate gated step per page.
+
+inputs:
+  slug:
+    type: string
+    required: true
+    hint: Template slug from content_list_site_templates (e.g. "saas-landing-default").
+
+discovery:
+  - id: list_gallery
+    tool: content_list_site_templates
+    payload:
+      industry: null              # all optional filters
+      use_case: null
+      tag: null
+      is_featured: null
+      limit: 50
+      offset: 0
+    returns:
+      templates:
+        - { slug, name, description, industry, use_case, tags, page_count, applied_count, screenshot_url }
+      total: integer
+
+  - id: inspect_template
+    tool: content_get_site_template
+    payload:
+      slug: $inputs.slug
+    returns:
+      slug: string
+      name: string
+      description: string
+      industry: string
+      use_case: string
+      tags: array
+      page_count: integer
+      screenshot_url: string
+      source_pages:
+        - { slug, title }
+      source_settings_keys: array
+
+apply_flow:
+  - id: dry_run
+    tool: content_apply_site_template
+    payload:
+      slug: $inputs.slug
+      dry_run: true
+    returns:
+      dry_run: true
+      preview:
+        pages_to_create:
+          - { slug, title }
+        nav_locations: array      # ["header", "footer"]
+        settings_keys_to_apply: array
+      confirm_token: string
+      expires_at: string
+
+  - id: human_check
+    manual: true
+    hint: |
+      Read the preview envelope. Confirm the page slugs don't collide with
+      existing pages in this tenant, the settings keys are ones you actually
+      want overwritten, and the nav locations match your design.
+
+  - id: apply
+    tool: content_apply_site_template
+    payload:
+      slug: $inputs.slug
+      confirm_token: $dry_run.confirm_token
+    returns:
+      pages_created:
+        - { id, slug, title, status }   # status is always "draft"
+      nav_updated: array                 # ["header", "footer"]
+      settings_applied: array
+
+post_apply:
+  - id: review_drafts
+    manual: true
+    hint: |
+      In the dashboard pages list (or via content_list_pages?status=draft),
+      review the new drafts. Edit copy, swap images, tweak block props.
+
+  - id: publish_each
+    tool: content_publish_page
+    repeat_for: $apply.pages_created
+    payload:
+      page_id: $page.id
+      dry_run: true
+    returns: { confirm_token: publish_token }
+    follow_up:
+      tool: content_publish_page
+      payload:
+        page_id: $page.id
+        confirm_token: $publish_token
+
+  - id: deploy
+    steps:
+      - tool: content_deploy_site_preview
+        returns: { preview_url, confirm_token: deploy_token }
+      - manual: true
+        hint: Open preview_url in a browser, walk every cloned page.
+      - tool: content_deploy_site_production
+        payload: { confirm_token: $deploy_token }
+
+what_gets_cloned:
+  pages: "published pages on template tenant → drafts in target (fresh block UUIDs, same slug, title preserved verbatim)"
+  navigation: "header + footer menus copied byte-for-byte (overwrites existing menus at those locations)"
+  settings: "only keys in source_settings_keys AND in the global content_settings allowlist (~22 keys); others silently skipped"
+  components: "NOT cloned per-tenant — resolved at render time via the global component registry (source publishes them is_global=true)"
+  media: "referenced by URL only; assets stay on media.cdn.spideriq.ai, no per-tenant copy"
+
+gated_with_dry_run:
+  - content_apply_site_template
+
+non_mutating_tools:
+  - content_list_site_templates
+  - content_get_site_template
+
+anti_patterns:
+  - DO NOT reuse a confirm_token; they're single-use, issue a fresh one via dry_run=true
+  - DO NOT apply a second template on top of the first without auditing the overlap (settings keys + nav are overwritten)
+  - DO NOT expect cloned pages to be live — they land as status='draft', publishing is a separate per-page gated step
+  - DO NOT edit the template tenant; it's read-only from your side (curated by SpiderIQ)
+  - DO NOT pass settings_keys outside the global allowlist — they will be silently skipped server-side, the template author cannot smuggle keys past the same allowlist that update_settings uses
+
+when_not_to_use:
+  - You already have content in this tenant and want to migrate styling only → use content_update_settings + template_apply_theme
+  - You want to copy ONE page from another tenant → that's not a template gallery operation; talk to SpiderIQ about adding it to the gallery
+  - You want a no-code page builder UX → the dashboard's templates-gallery.tsx page wraps this exact flow with a card grid + apply modal
+
+canonical_see_also:
+  - content-platform
+  - templates-engine
+  - recipes/preview-iteration

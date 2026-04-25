@@ -103,6 +103,14 @@ Use this primitive for: "make a copy of the homepage and tweak it as the holiday
 
 Runnable example: [examples/duplicate-page.sh](./examples/duplicate-page.sh).
 
+## Template gallery — bootstrap a tenant (Phase B, 2026-04-25)
+
+For a brand-new tenant, applying a SpiderIQ-curated starter site (`saas-landing-default`, `agency-portfolio`, `restaurant-default`, ...) is faster than building from scratch. Three tools — `content_list_site_templates` and `content_get_site_template` are public reads; `content_apply_site_template` is Phase 11+12 gated (dry_run → confirm_token).
+
+`apply` clones the source tenant's published pages → drafts in your tenant, copies header/footer nav, and writes a whitelisted slice of theme settings keys. After apply: review drafts, publish per-page, deploy.
+
+Full walkthrough: [skills/recipes/apply-template/](./skills/recipes/apply-template/) · Runnable: [examples/apply-template.sh](./examples/apply-template.sh) · See AGENTS.md → "Site templates" for the full surface.
+
 ## Deploy Requirements (IMPORTANT)
 
 Deploy **rejects** if any of these are missing:

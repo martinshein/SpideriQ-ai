@@ -141,6 +141,52 @@ POST /dashboard/projects/{pid}/content/docs/{doc_id}/duplicate
 
 Runnable example: [examples/duplicate-page.sh](./examples/duplicate-page.sh).
 
+### Site templates (gallery — Phase B, 2026-04-25)
+
+Bootstrap a brand-new tenant from a SpiderIQ-curated starter site (saas-landing, agency-portfolio, restaurant, ...). The gallery is a list of opinionated reference sites authored on a shared "template-source" tenant. Applying one **clones** the published pages into your tenant as drafts, copies header/footer navigation, and writes a curated slice of settings keys. You review the drafts, publish what you want, deploy.
+
+**When to use:** fresh tenant, want a credible starting point in 30 seconds. Not for already-populated tenants — apply overwrites nav locations and settings keys it touches.
+
+```bash
+# MCP
+content_list_site_templates(industry="saas", is_featured=true)         # public read
+content_get_site_template(slug="saas-landing-default")                 # public read
+content_apply_site_template(slug="saas-landing-default", dry_run=true) # → confirm_token + preview
+content_apply_site_template(slug="saas-landing-default", confirm_token="cft_...")
+
+# CLI
+spideriq content templates:gallery --industry saas --featured
+spideriq content templates:get saas-landing-default
+spideriq content templates:apply saas-landing-default                  # interactive (dry_run → table → [y/N])
+spideriq content templates:apply saas-landing-default --confirm-token cft_...
+
+# REST
+GET  /api/v1/content/site-templates?industry=saas&is_featured=true
+GET  /api/v1/content/site-templates/saas-landing-default
+POST /api/v1/dashboard/projects/{pid}/content/templates/apply-site-template/{slug}?dry_run=true
+POST /api/v1/dashboard/projects/{pid}/content/templates/apply-site-template/{slug}?confirm_token=cft_...
+```
+
+**The dry_run → confirm_token flow** (Phase 11+12 gated, like every destructive content op):
+
+1. First call with `dry_run=true` returns `{ preview: { pages_to_create, nav_locations, settings_keys_to_apply }, confirm_token, expires_at }`. No DB writes.
+2. Read the preview — confirm slug collisions are acceptable, settings keys are ones you actually want overwritten, nav locations match.
+3. Second call with `confirm_token=cft_...` actually clones. Returns `{ pages_created, nav_updated, settings_applied }`.
+
+Single-use tokens, 7-day TTL. 409 on reuse, 410 if expired, 403 on action mismatch — same error model as every other gated op.
+
+**What gets cloned:**
+
+- **Pages** → drafts in target. Source-tenant published pages become `status='draft'` rows with fresh block UUIDs and the same slug. Title preserved verbatim (the template IS the canonical version, not a " (Copy)"). Slug collision with an existing page = 409 on apply. Cloned pages don't appear on the live site until you publish each one separately.
+- **Navigation** → header/footer copied byte-for-byte to your tenant's `content_navigation` rows. Existing menus at those locations are overwritten.
+- **Settings** → only keys whitelisted by `source_settings_keys` AND in the global `content_settings` allowlist (~22 keys: `site_name`, `primary_color`, `surface_color`, `body_text_color`, `heading_color`, `logo_*_url`, `social_links`, `default_seo_title_suffix`, `google_analytics_id`, ...). Anything outside that allowlist is silently skipped server-side — template authors cannot smuggle keys past the same allowlist `content_update_settings` enforces.
+- **Components** referenced by template pages are NOT cloned per-tenant — they live on the template-source tenant with `is_global=true`, and the renderer's existing global-component resolution picks them up at request time.
+- **Media** is referenced by URL only (`media.cdn.spideriq.ai/...`); no per-tenant copy.
+
+After apply: review drafts in the dashboard, `content_publish_page` each one (gated, dry_run→confirm), then `content_deploy_site_preview` → `content_deploy_site_production`.
+
+Runnable example: [examples/apply-template.sh](examples/apply-template.sh) · Full recipe: [skills/recipes/apply-template/](skills/recipes/apply-template/).
+
 ### Block Types
 `hero`, `features_grid`, `cta_section`, `testimonials`, `pricing_table`, `faq`, `stats_bar`, `rich_text`, `image`, `video_embed`, `code_example`, `logo_cloud`, `comparison_table`, `spacer`, `component`
 
@@ -503,6 +549,7 @@ Multi-step workflows that compose MCP tools. Live at **[skills/](skills/)** in t
 - [recipes/component-rollback](skills/recipes/component-rollback/) — Unroll a bad component change
 - [recipes/link-audit](skills/recipes/link-audit/) — Find broken internal links across pages + nav before deploy (2026-04-24)
 - [recipes/tilda-migration](skills/recipes/tilda-migration/) — Port a Tilda site with `auto_extract_css` + flat slugs + `category='header'|'footer'` components (2026-04-24)
+- [recipes/apply-template](skills/recipes/apply-template/) — Bootstrap a fresh tenant from a SpiderIQ-curated starter site (Phase B, 2026-04-25)
 
 Tier 3 `impl.ts` files use only Node 18+ stdlib (`fetch`, `fs`, `path`) — zero npm dependencies. Copy-paste them into your agent's sandbox and run with `npx tsx impl.ts`. No extra runtime required.
 

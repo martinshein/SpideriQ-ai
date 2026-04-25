@@ -1,5 +1,5 @@
 name: content-platform
-version: "2.2.0"
+version: "2.3.0"
 tier: 1
 description: >
   Reference catalog of the SpiderPublish content-platform MCP tools.
@@ -14,6 +14,12 @@ description: >
   v2.2.0 (2026-04-24): added `duplicate.*` primitives (`content_duplicate_page` /
   `_block` / `_post` / `_doc`). Phase A of the template-gallery / section-library /
   import-adapter follow-on plan. Every later phase composes on these.
+
+  v2.3.0 (2026-04-25): added `site_templates.*` (`content_list_site_templates`,
+  `content_get_site_template`, `content_apply_site_template`) — Phase B of the
+  follow-on plan. Apply is gated by Phase 11+12 dry_run/confirm_token; list + get
+  are public reads. Cloned pages land as status='draft', settings keys are
+  whitelisted to the same allowlist `content_update_settings` uses.
 
 tools:
   pages:
@@ -127,6 +133,15 @@ tools:
     - content_duplicate_block          # body: {position?: 'before'|'after'|<int>}; deep-copies one block in place
     - content_duplicate_post           # body: {new_slug?}; returns new draft PostResponse
     - content_duplicate_doc            # body: {new_slug?}; copy lives as a sibling under the same parent_id
+  site_templates:
+    # 2026-04-25 (Phase B): bootstrap a fresh tenant from a SpiderIQ-curated starter site.
+    # `list` + `get` are public reads (no auth needed) backed by a curated gallery of
+    # opinionated reference sites authored on a shared "template-source" tenant.
+    # `apply` clones published pages → drafts in the target tenant, copies header/footer
+    # nav, and writes a whitelisted slice of settings keys. Phase 11+12 gated.
+    - content_list_site_templates      # filters: industry, use_case, tag, is_featured, limit, offset
+    - content_get_site_template        # body: {slug}; returns {source_pages, source_settings_keys, screenshot_url, ...}
+    - content_apply_site_template      # body: {slug, dry_run|confirm_token}; returns pages_created/nav_updated/settings_applied
 
 gated_with_dry_run:
   - content_publish_page
@@ -141,6 +156,7 @@ gated_with_dry_run:
   - component_rollback
   - directory_delete_listing
   - directory_delete_category
+  - content_apply_site_template
 
 blog_workflow:
   body_format: tiptap_json
@@ -204,3 +220,4 @@ canonical_see_also:
   - recipes/component-rollback
   - recipes/link-audit
   - recipes/tilda-migration
+  - recipes/apply-template
