@@ -102,6 +102,20 @@ Recipes:
 | Uploading 120 × 1.6 MB DSLR JPG frames to a scroll-sequence, hoping for the best | 192 MB batch → first paint takes forever / CDN bill balloons / mobile users bounce. Beyond 2026-04-18, server returns 400 with `weight_policy_violated` | Use `upload_local_directory(folder="scroll-sequences/hero")` — defaults to `auto_optimize=true` which runs Sharp locally (WebP q75, max 1920px wide). 192 MB → ~8 MB. Server hard ceiling: 500 KB per file, 20 MB per batch for `scroll-sequences/*`. |
 | `upload_local_directory` reports `sharp not available, continuing without optimization` | Platform-specific `sharp` optional install failed (e.g. uncommon Linux glibc, Alpine). Tool uploads originals, which then hit server ceilings. | `npm install sharp` in the MCP runtime's cwd. Or pre-optimize frames yourself with `cwebp -q 75` and re-run with `--no-auto-optimize`. |
 
+## Apply-site-template gotchas (Phase B, 2026-04-25)
+
+Three failure modes worth knowing before you bootstrap a tenant from the gallery.
+
+| Gotcha | What Happens | Fix |
+|--------|-------------|-----|
+| Cloned pages don't appear on the live site | Apply lands every page as `status='draft'`, not `status='published'`. The draft pages render in the dashboard but the public site keeps serving 404s for those slugs. | Publish each cloned page after apply (`content_publish_page` — gated, dry_run → confirm_token), THEN deploy. The recipe walks through every step. |
+| Settings keys silently disappear | `content_apply_site_template` only writes keys that are BOTH in the template's `source_settings_keys` AND in the global `content_settings` allowlist (~22 keys). Anything else is server-side `logger.warning('skipping non-allowlisted settings key=...')` and silently dropped. | This is a feature — template authors can't smuggle arbitrary keys past the same allowlist `content_update_settings` uses. If a template needs a key that isn't allowlisted, ask SpiderIQ to add the key globally; don't try to widen it on a per-template basis. |
+| Cloned pages render with broken components | Pages reference components by slug. The renderer resolves them via the global component registry (the source tenant publishes them with `is_global=true`) — if a template's component isn't actually global on the source tenant, your pages render the "component not found" placeholder and there's nothing in YOUR tenant to fix. | This is a SpiderIQ-side curation contract. If you hit it, file a bug — the template author should `content_update_component(... is_global=true)` and republish on the source tenant. Per-tenant component clones are not part of the apply flow by design (would balloon the component count for every tenant). |
+| Apply a second template on top of an already-applied one | Pages accumulate (slug collision = 409). Nav and settings keys touched by the second template silently overwrite the first's. | Don't. If you need to "switch templates" mid-build, delete the existing draft pages first, reset settings via `content_update_settings`, then apply. Or talk to SpiderIQ about a "reset tenant" workflow — currently not exposed. |
+| Re-running with the same `confirm_token` after apply succeeded | 409 TokenConsumed. Single-use token model. | Issue a fresh `dry_run=true` to get a new token. The cloned pages from the first apply are already in place. |
+
+Recipe with the safe step-by-step: [skills/recipes/apply-template/](skills/recipes/apply-template/). Runnable: [examples/apply-template.sh](examples/apply-template.sh).
+
 ## Content
 
 | Gotcha | What Happens | Fix |
