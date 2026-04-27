@@ -1,5 +1,5 @@
 name: content-platform
-version: "2.2.0"
+version: "2.4.0"
 tier: 1
 description: >
   Reference catalog of the SpiderPublish content-platform MCP tools.
@@ -14,6 +14,14 @@ description: >
   v2.2.0 (2026-04-24): added `duplicate.*` primitives (`content_duplicate_page` /
   `_block` / `_post` / `_doc`). Phase A of the template-gallery / section-library /
   import-adapter follow-on plan. Every later phase composes on these.
+
+  v2.3.0 (2026-04-25): added `site_templates.*` group — browse SpiderIQ-curated
+  starter sites and apply one to a tenant in one call. Phase B of the same plan.
+  Apply is Phase 11+12 gated.
+
+  v2.4.0 (2026-04-26): added `marketplace.*` group + `pages.page_insert_section`.
+  Phase C — section library (30 components) + bg-video catalog (12 clips) +
+  sys-bg-video wrapper. page_insert_section is Phase 11+12 gated.
 
 tools:
   pages:
@@ -127,6 +135,23 @@ tools:
     - content_duplicate_block          # body: {position?: 'before'|'after'|<int>}; deep-copies one block in place
     - content_duplicate_post           # body: {new_slug?}; returns new draft PostResponse
     - content_duplicate_doc            # body: {new_slug?}; copy lives as a sibling under the same parent_id
+  site_templates:
+    # Phase B — 2026-04-25: browse SpiderIQ-curated starter sites, apply one to the tenant.
+    # Apply clones every page in the template's source_page_slugs into the target tenant
+    # as drafts, copies header+footer nav, and copies whitelisted theme settings keys.
+    # Apply is Phase 11+12 gated.
+    - content_list_site_templates       # public read; filters: industry, use_case, tag, is_featured
+    - content_get_site_template         # public read; returns full template detail by slug
+    - content_apply_site_template       # body: {}; gated; clones source pages + nav + settings
+  marketplace:
+    # Phase C — 2026-04-26: section library + bg-video library.
+    # 30 marketplace components on the source tenant (12 palette + 18 new sections),
+    # 12 curated bg-videos, sys-bg-video wrapper component.
+    # All reads are public. page_insert_section is Phase 11+12 gated.
+    - content_list_marketplace_components  # public read; filters: category, is_featured, tag
+    - content_list_marketplace_bg_videos   # public read; filters: category, tag, is_featured
+    - content_get_marketplace_bg_video     # public read; single video by slug
+    - page_insert_section                  # gated; insert a marketplace section into a page
 
 gated_with_dry_run:
   - content_publish_page
@@ -141,6 +166,8 @@ gated_with_dry_run:
   - component_rollback
   - directory_delete_listing
   - directory_delete_category
+  - content_apply_site_template      # Phase B
+  - page_insert_section              # Phase C
 
 blog_workflow:
   body_format: tiptap_json
@@ -204,3 +231,5 @@ canonical_see_also:
   - recipes/component-rollback
   - recipes/link-audit
   - recipes/tilda-migration
+  - recipes/apply-template       # Phase B — start from a SpiderIQ-curated starter site
+  - recipes/section-library      # Phase C — insert a ready-made section into an existing page

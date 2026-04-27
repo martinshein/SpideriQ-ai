@@ -1,0 +1,83 @@
+name: section-library
+tier: 2
+description: >
+  Browse the 30-section marketplace and insert a ready-made section into an
+  existing page. Phase 11+12 gated — dry_run returns a confirm_token + preview,
+  a second call with confirm_token does the actual mutation.
+
+inputs:
+  page_id:
+    type: string
+    required: true
+    hint: UUID of the target page.
+  component_slug:
+    type: string
+    required: true
+    hint: Marketplace component slug (e.g. "hero-headline", "logo-cloud", "cta-banner").
+  component_version:
+    type: string
+    required: false
+    hint: Pin a specific version. Omit for latest published.
+  props:
+    type: object
+    required: false
+    hint: Props matching the component's props_schema. Falls through default_props for omitted keys.
+  position:
+    type: any
+    default: end
+    hint: "'start' | 'end' | 'before' | 'after' | <integer index>"
+  anchor_block_id:
+    type: string
+    required: false
+    hint: Required when position is 'before' or 'after'.
+
+# ============================================================
+# Browse first
+# ============================================================
+browse:
+  - tool: content_list_marketplace_components
+    args:
+      category: $category   # hero | features | pricing | social-proof | content | forms | team | footer | header | cta | faq
+      is_featured: true
+  # → returns { components: [...], total: N }
+
+# ============================================================
+# Insert (Phase 11+12 dry_run/confirm_token)
+# ============================================================
+insert:
+  - tool: page_insert_section
+    args:
+      page_id:        $page_id
+      component_slug: $component_slug
+      props:          $props
+      position:       $position
+      anchor_block_id: $anchor_block_id
+      dry_run:        true
+    returns:
+      confirm_token: string
+      preview:       object
+  - tool: page_insert_section
+    args:
+      page_id:        $page_id
+      component_slug: $component_slug
+      props:          $props
+      position:       $position
+      anchor_block_id: $anchor_block_id
+      confirm_token:  $previous.confirm_token
+    returns:
+      success:         true
+      page_id:         string
+      new_block_id:    string
+      insertion_index: integer
+      blocks_count:    integer
+
+# ============================================================
+# After the insert
+# ============================================================
+after:
+  - "Page is NOT auto-published. Call content_publish_page(page_id) to push the block live."
+  - "OR content_deploy_site to re-render every page on the tenant."
+
+related:
+  - apply-template:    "Start from a curated starter site instead of inserting individual sections."
+  - bulk-media-upload: "Upload images referenced by features/team/about-story sections in bulk."
