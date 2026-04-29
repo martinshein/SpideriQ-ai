@@ -70,8 +70,10 @@ Recipes:
 | No header navigation | Site renders with no menu | `PUT /dashboard/projects/{pid}/content/navigation/header` with items |
 | Preview URL returns 404 in the first ~60s | Cloudflare edge is still propagating the new Worker script | Wait 60 seconds, retry — don't "fix" the code |
 | Subdomain deploy (`mail.client.com` on client's own CF zone) returns instant 522 (<100ms) | Worker Route not attached because CF `GET /zones?name=` only matches exact zone names | Fixed in v2.x — `_ensure_worker_route` now walks up the domain hierarchy. Re-run deploy |
+| HTTP-probing a freshly verified domain returns CF 522 (<100ms) even though `is_verified=true` | The per-client tenant Worker doesn't exist in the dispatch namespace yet — the response carries `needs_deploy: true` | Watch the `needs_deploy` flag on `content_verify_domain` response. When true, run `content_deploy_site_preview` → `content_deploy_site_production(confirm_token)` before announcing the domain. Once `needs_deploy=false`, give CF ~5s for KV propagation, then probe. |
+| Adding a domain returns 200 but the domain still 522s | The `worker_route_status` and `custom_hostname_status` fields tell you which Cloudflare onboarding path actually succeeded. A `"skipped_zone_not_ours"` for the route AND a `"registered"` for the hostname is the correct out-of-account-zone outcome. A `"skipped_in_account_zone"` for the hostname AND a `"created"` for the route is the correct in-account outcome. Anything else is the bug. | Read both `*_status` fields on `content_add_domain` response. Surface non-happy values to the user; retry on `error: ...`. |
 
-**Rule:** Always call `content_deploy_readiness` before `content_deploy_site_preview`. It catches all the missing-prerequisite cases.
+**Rule:** Always call `content_deploy_readiness` before `content_deploy_site_preview`. It catches all the missing-prerequisite cases. And read the response from `content_add_domain` / `content_verify_domain` — the status fields tell you exactly what state the domain is in.
 
 ## Components
 

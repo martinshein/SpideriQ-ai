@@ -56,6 +56,40 @@ Typical workflow to "make the footer dark":
 
 Used in production by danmagi.com, sms-chemicals.com, mail.spideriq.ai.
 
+### Customize Blog Templates (2026-04-29)
+
+`content_override_section` only covers chrome (`header | footer | layout | head | hero`). Blog templates use the generic `template_upsert` path instead — same KV-override semantics, different entry point.
+
+```
+templates/blog.liquid          → blog listing layout (used at /blog)
+templates/blog-post.liquid     → single post layout (used at /blog/{slug})
+snippets/post-card.liquid      → blog post card (reused in listing + related posts)
+assets/theme.css               → CSS for blog AND every other page
+```
+
+Workflow to restyle the blog listing:
+```
+1. template_get({path: "templates/blog.liquid"}) → returns the bundled default if no override exists yet
+2. modify the returned Liquid in your own context
+3. template_upsert({path: "templates/blog.liquid", content: modified})
+4. content_deploy_site_preview() → content_deploy_site_production(confirm_token)
+```
+
+CLI equivalent: `spideriq templates set 'templates/blog.liquid' --file ./blog.liquid`
+
+The renderer merges per-client KV overrides over the bundled default theme automatically. No need to "register" the override — uploading via `template_upsert` is the registration. Same applies to any other path (`assets/theme.css`, `snippets/anything.liquid`, etc.).
+
+### Inject `<head>` scripts site-wide (2026-04-29)
+
+For analytics, Tag Manager, custom meta tags. One field on Settings, no template editing required:
+
+```
+content_update_settings({custom_head_scripts: "<script src='https://example.com/ga.js'></script>"})
+content_deploy_site_preview() → content_deploy_site_production(confirm_token)
+```
+
+The renderer's `snippets/head.liquid` injects this verbatim into every rendered page's `<head>`. No length cap; multi-line is fine. Round-trips through dashboard, CLI, and MCP — same field everywhere.
+
 ### Deploy Requirements
 
 Deploy **rejects** if any blocking item is missing. Always call `content_deploy_readiness` first.
@@ -191,6 +225,22 @@ Every block in `content_pages.blocks[]` has this canonical shape:
 | `heading_color` | Headings / logo text | `#ffffff` |
 
 Make the whole site light: set `surface_color: "#ffffff"`, `surface_elevated_color: "#f5f5f5"`, `subtle_color: "#e5e5e5"`, `body_text_color: "#18181b"`, `heading_color: "#0a0a0a"`.
+
+### Other Settings fields
+
+| Field | Purpose | Notes |
+|---|---|---|
+| `site_name` | Required for deploy | Used in `<title>`, footer, og:site_name |
+| `site_tagline` | Subtitle | Optional |
+| `favicon_url` | Browser tab icon | URL to a `.ico`/`.png`/`.svg` |
+| `logo_dark_url` / `logo_light_url` | Header logos | Renderer picks based on theme |
+| `copyright_text` | Footer copyright | Defaults to `© {year} {site_name}` |
+| `social_links` | Object: `{twitter: "...", linkedin: "..."}` | Used by default footer |
+| `google_analytics_id` | GA Measurement ID | `G-XXXXXX` — renderer injects the snippet |
+| `plausible_domain` | Plausible domain | Renderer injects the snippet |
+| `default_og_image_url` | Page-level OG image fallback | URL |
+| `default_seo_title_suffix` | Appended to every `<title>` | e.g. ` | Acme Co.` |
+| `custom_head_scripts` | Raw HTML/JS for `<head>` (2026-04-29+) | No length cap. Use for Tag Manager, custom meta tags, third-party widgets — anything that doesn't fit the GA / Plausible shortcuts. |
 
 ### Upload Images / PDFs / Video (from a URL)
 ```bash
