@@ -113,6 +113,37 @@ Deploy **rejects** if any of these are missing:
 
 **Always call `content_deploy_readiness` before previewing the deploy.**
 
+### Domain onboarding response (2026-04-29+)
+
+`content_add_domain` and `content_verify_domain` carry status fields that tell you exactly what state the domain is in. Read them; don't assume "verified=true" means "serves traffic."
+
+`content_add_domain` response includes:
+
+| Field | Values | Meaning |
+|---|---|---|
+| `worker_route_status` | `"created"` | Worker Route just attached on the domain's CF zone — domain is routable. |
+| | `"exists"` | Route was already there from a prior call. Idempotent. |
+| | `"skipped_zone_not_ours"` | Domain is in a CF zone we don't own; you (the customer) need to configure the route on your side. |
+| | `"skipped_in_account_zone"` | (only on `custom_hostname_status`) The CF for SaaS path skipped because we own the zone — Worker Route handles dispatch instead. |
+| | `"error: <detail>"` | CF API rejected something. Surface the detail to the user; retry. |
+| `custom_hostname_status` | `"registered"` | CF for SaaS custom hostname registered on the spideriq.ai zone. Customer should CNAME their domain to `sites.spideriq.ai`. |
+| | `"already_exists"` | Hostname was already registered. |
+| | `"skipped_in_account_zone"` | Domain has its own CF zone in our account; Worker Route path is used instead. |
+| | `"error: <detail>"` | Same shape as above. |
+
+`content_verify_domain` response includes:
+
+| Field | Values | Meaning |
+|---|---|---|
+| `needs_deploy` | `true` | The client has zero `live` deploys — even with the route in place, the per-client tenant Worker doesn't exist in the dispatch namespace yet, so HTTP probes will return CF 522. Trigger a deploy before announcing the domain to anyone. |
+| | `false` | The client has at least one live deploy; the verified domain serves traffic immediately. |
+
+Rule of thumb for AI agents wiring up new tenants:
+1. `content_add_domain(domain)` → check both `*_status` fields. Surface anything that's not `created`/`exists`/`registered` to the user.
+2. Wait for DNS verification (TXT record / CNAME), then `content_verify_domain(domain)`.
+3. If `needs_deploy=true`, call `content_deploy_site_preview()` → `content_deploy_site_production(confirm_token)` BEFORE telling the user "your domain is live."
+4. Once `needs_deploy=false` AND every `*_status` is in a happy state, the domain serves traffic in ~5s (CF KV propagation).
+
 ## Error Responses (Phase 11+12)
 
 | Status | Meaning | What to do |
