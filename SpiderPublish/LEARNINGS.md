@@ -46,6 +46,52 @@ Recipes:
 
 **Quick debug:** If you're getting unexpected 403s on dashboard calls, run `npx spideriq whoami` — it shows both the PAT scope and the session binding, and flags any mismatch between them.
 
+## Blog Customization (read this if your AI agent suggests "patch the blog component")
+
+| Gotcha | What Happens | Fix |
+|--------|-------------|-----|
+| Trying to PATCH a `dm-blog-listing` / `<brand>-blog-listing` / "blog component" via `PATCH /content/components/{id}` | Returns 404 or 500 — **the component does not exist**. SpiderPublish blogs are template-based, not component-based. AI agents (especially AntiGravity / Gemini) sometimes hallucinate this name. | Use `content_override_section({section_slug: "blog-listing", liquid_source: ...})` (writes `templates/blog.liquid` per-tenant) or create a CMS page at slug `blog` to compose blocks instead. See "How to restyle the blog" below. |
+| Building a parallel `/our-blog` (or `/articles`, etc.) page with a hand-rolled component because "the platform `/blog` is locked" | You lose native pagination, automatic post sync, and the canonical URL. Posts created via `content_create_post` won't appear there. | Override `templates/blog.liquid` instead — it keeps native pagination + all CMS posts + the `/blog` URL. |
+| Wanting to add a custom `<header>` / hero block specifically on `/blog` | The hardcoded blog template doesn't compose other blocks — it renders a fixed Liquid layout. | **Two options:** (1) Create a CMS page at slug `blog`. The renderer prefers a CMS page over the hardcoded template (2026-04-30+). The page's blocks (hero, custom footer, anything) render via `templates/page.liquid`. (2) Edit `templates/blog.liquid` directly and put your custom markup in the Liquid source. |
+| Want to restyle the post detail page (`/blog/{slug}`) | Same as the listing — `templates/blog-post.liquid` is overridable per-tenant. | `content_override_section({section_slug: "blog-post", liquid_source: ...})` or `template_upsert(path: "templates/blog-post.liquid", content: ...)`. |
+| Want to restyle just the post card (the "row" in the listing AND the "related posts" block on single posts) | One file, used in two places: `snippets/post-card.liquid`. | `template_upsert(path: "snippets/post-card.liquid", content: ...)`. |
+
+**How to restyle the blog (full recipe):**
+
+```
+# Easy path — content_override_section wraps template_upsert with a friendly slug
+content_get_section_source({section_slug: "blog-listing"})    # see current source
+content_override_section({section_slug: "blog-listing", liquid_source: <your custom blog.liquid>})
+content_override_section({section_slug: "blog-post",    liquid_source: <your custom blog-post.liquid>})
+
+# OR Block-composition path — make /blog a normal CMS page
+content_create_page({slug: "blog", template: "default", blocks: [<hero block>, <custom>, ...]})
+content_publish_page({id: <new-page-id>})
+content_deploy_preview() → content_deploy_production({confirm_token: ...})
+
+# OR Underlying API — full template control
+template_upsert({path: "templates/blog.liquid",      content: ...})
+template_upsert({path: "templates/blog-post.liquid", content: ...})
+template_upsert({path: "snippets/post-card.liquid",  content: ...})
+```
+
+CLI equivalent: `spideriq templates set 'templates/blog.liquid' --file ./blog.liquid`
+
+The Liquid engine merges per-tenant KV templates over the bundled default theme automatically. There is **no separate publish step** for templates — the override is live as soon as the next render reads from KV (after `content_deploy_*`).
+
+## Marketplace Background Videos (super-admin only — not normal client work)
+
+The bg-video gallery on every SpiderPublish tenant pulls from a **global** catalog (`content_bg_videos`) shared across all clients. It's super-admin only by design — your project token cannot write to it. Two paths to add new videos (super-admins only):
+
+| Method | Use when |
+|---|---|
+| Dashboard `/admin/content/marketplace/bg-videos/new` — drop MP4 + poster, type Name (slug auto-fills), save | Adding 1-3 videos interactively |
+| `npx @spideriq/cli@latest bg-videos add ./hero.mp4 --slug city-hotel --name "City Hotel" --poster ./hero.jpg` | Adding 5+ videos in a script |
+
+Files up to 500 MB are accepted (raised from 10 MB on 2026-04-30). The CLI's `bg-videos upload` / `bg-videos create` / `bg-videos add` subcommands all 403 with a clear message if the token isn't super-admin.
+
+`media upload` (the general-purpose CLI command) writes to a **different** bucket (per-tenant SpiderMedia) and the result will NOT appear in the marketplace gallery. They are different storage systems with different auth.
+
 ## Theme & Chrome
 
 | Gotcha | What Happens | Fix |
