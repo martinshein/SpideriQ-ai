@@ -7,7 +7,7 @@
 > Tiers Reference: [docs.spideriq.ai/site-builder/component-tiers](https://docs.spideriq.ai/site-builder/component-tiers)
 > Agent Reference: [docs.spideriq.ai/site-builder/component-agents-reference](https://docs.spideriq.ai/site-builder/component-agents-reference)
 
-**Current package versions (1.0.0, 2026-04-18):** `@spideriq/cli@1.0.0`, `@spideriq/mcp-publish@1.0.0`, `@spideriq/core@1.0.0` — **105 tools** (atomic SpiderPublish slice covering pages, posts, docs, templates, components, domains, media, directory, playbook, plus scroll-sequence / section-overrides / component-propagation / local-upload one-shots). The kitchen-sink `@spideriq/mcp@1.0.0` bundles the full surface including SpiderBook booking tools (cal.com integration); pin it only if you also need mail / leads / gate / admin. The starter kit's `.mcp.json` defaults to `@spideriq/mcp-publish` — under the ~128-tool injection limit enforced by some IDE/LLM stacks, and less context burn per message.
+**Current package versions (1.5.0, 2026-05-05):** `@spideriq/cli@1.5.0`, `@spideriq/mcp-publish@1.5.0`, `@spideriq/core@1.4.0`. The atomic publish slice now exposes **6 new Marketplace V2 tools** (search by mood / palette / brand-fit / scene-type, browse data sources, set component kind + agent_meta) — see the "Marketplace V2" section below. The kitchen-sink `@spideriq/mcp@1.5.0` totals 124 tools and bundles SpiderBook booking + mail / leads / gate / admin slices. The starter kit's `.mcp.json` defaults to `@spideriq/mcp-publish` — under the ~128-tool injection limit enforced by some IDE/LLM stacks, and less context burn per message.
 
 ## Quick Reference
 
@@ -483,6 +483,42 @@ Ready-to-POST examples in `components/`:
 - Jobs: 10 submissions/minute
 - Always use `?format=yaml` (saves 40-76% tokens)
 
+## Marketplace V2 — find sections by intent (May 2026)
+
+**The shipped pivot.** The classic `content_list_marketplace_components` filters by `category` (hero, features, pricing, …). Six new tools turn the same catalog into something you search by **what an agent actually wants** — "calm cinematic for a luxury hotel," "energetic conversion-focused for ecommerce" — across all 3 marketplace tables (bg-videos / components / site-templates) in one query.
+
+```
+marketplace_search(
+  mood = ["calm"],
+  asset_types = ["bg_video"],
+  limit = 5
+)
+# → results: [{slug, asset_type, mood, scene_type, video_url|preview_thumbnail_url, ...}]
+```
+
+| Tool | Auth | Use case |
+|---|---|---|
+| `marketplace_search` | public | Cross-table search by mood / palette / brand_fit_tags / scene_type / agent_meta / asset_types |
+| `list_data_sources` | public | Discover available source IDs for binding `kind="dynamic"` blocks (posts, authors, IDAP×4, idap.lead) |
+| `set_component_kind` | gated | Promote a custom component into the 4-class taxonomy (`static / interactive / dynamic / extension`) |
+| `set_component_agent_meta` | gated | Curate axes + ComponentAgentMeta on a component so other agents can find it |
+| `set_bg_video_agent_meta` | super_admin, gated | Curate bg-video discoverability (pace, time_of_day, weather, aspect_ratio, …) |
+| `set_site_template_agent_meta` | super_admin, gated | Curate site-template discoverability (page_count, has_blog, style_aesthetic, …) |
+
+**CLI mirrors:** `npx @spideriq/cli marketplace search`, `... marketplace help`, `... sources list`, `... bg-videos set-meta`, `... content components set-kind`, `... content components set-meta`.
+
+**Vocabulary (subset):**
+
+| Axis | Values |
+|---|---|
+| `mood` | calm, energetic, bold, confident, dreamy, futuristic, urban, minimal, warm, sensory, editorial, professional, friendly, clear, technical, credible |
+| `brand_fit_tags` | saas, agency, ecommerce, fintech, hospitality, restaurant, wellness, healthcare, blog, publication, real-estate, … |
+| `scene_type` | hero-bold, conversion-cta, social-proof (components); city-aerial, nature-landscape (bg-videos); marketing-site, docs-site (site-templates) |
+
+Full vocab + per-asset `agent_meta` keys (BgVideoAgentMeta / ComponentAgentMeta / SiteTemplateAgentMeta): [skills/content-platform/schema.yaml](skills/content-platform/schema.yaml) under `marketplace_v2_axes:`. Or call `template_get_help` (returns the canonical YAML reference).
+
+**Recipe:** [skills/recipes/marketplace-search-and-insert/](skills/recipes/marketplace-search-and-insert/) · **Example:** [examples/marketplace-search-and-insert.sh](examples/marketplace-search-and-insert.sh).
+
 ## Skills — Curated Recipes
 
 Multi-step workflows that compose MCP tools. Live at **[skills/](skills/)** in this starter kit.
@@ -503,6 +539,7 @@ Multi-step workflows that compose MCP tools. Live at **[skills/](skills/)** in t
 - [recipes/component-rollback](skills/recipes/component-rollback/) — Unroll a bad component change
 - [recipes/link-audit](skills/recipes/link-audit/) — Find broken internal links across pages + nav before deploy (2026-04-24)
 - [recipes/tilda-migration](skills/recipes/tilda-migration/) — Port a Tilda site with `auto_extract_css` + flat slugs + `category='header'|'footer'` components (2026-04-24)
+- [recipes/marketplace-search-and-insert](skills/recipes/marketplace-search-and-insert/) — Find a marketplace asset by intent (mood/palette/brand-fit/scene), insert it into a page (2026-05-05)
 
 Tier 3 `impl.ts` files use only Node 18+ stdlib (`fetch`, `fs`, `path`) — zero npm dependencies. Copy-paste them into your agent's sandbox and run with `npx tsx impl.ts`. No extra runtime required.
 

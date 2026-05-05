@@ -594,6 +594,85 @@ Submit any template: read the JSON, then `POST /api/v1/dashboard/projects/{pid}/
 
 ---
 
+## Marketplace V2 — Find by intent (May 2026)
+
+The marketplace has two access patterns. Use the right one for the task:
+
+| Pattern | When | Tool |
+|---|---|---|
+| **Browse by category** | "Show me all hero blocks" | `content_list_marketplace_components(category="hero")` |
+| **Search by intent** | "Find me a calm cinematic background for a luxury hotel" | `marketplace_search(mood=["calm"], brand_fit=["hospitality"], asset_types=["bg_video"])` |
+
+`marketplace_search` filters across all 3 marketplace tables (bg-videos / components / site-templates) by 4 universal axes + per-asset `agent_meta`:
+
+```
+Universal axes (top-level columns; NOT inside agent_meta):
+  mood          TEXT[]    any-of match in search; controlled vocabulary
+  palette       TEXT[]    any-of match; free-form (cap 12 entries on write)
+  brand_fit     TEXT[]    any-of match; controlled vocabulary
+  scene_type    VARCHAR   single-value; controlled vocabulary
+
+Per-asset agent_meta (JSONB, extra="forbid"):
+  bg_video       → pace, time_of_day, weather, has_people, aspect_ratio,
+                   has_audio, music_tempo_bpm, transcript
+  component      → interaction_pattern, trigger_kind, placement,
+                   motion_safety, accessibility_notes, conversion_strategy
+  site_template  → page_count, has_blog, has_pricing, has_directory,
+                   has_booking, conversion_strategy, style_aesthetic,
+                   component_set
+```
+
+Full vocabulary in `skills/content-platform/schema.yaml` under `marketplace_v2_axes:`. Or `template_get_help` returns the canonical YAML.
+
+### 4-class behavioural taxonomy (`kind`)
+
+Every component carries a `kind` that dictates how the renderer treats it:
+
+| kind | Props? | Reads data? | JS? | Examples |
+|---|---|---|---|---|
+| `static` | ✓ | – | no | hero-headline, faq-accordion, pricing-3tier |
+| `interactive` | ✓ | – | yes | sys-timer-fixed-date, sys-popup-exit-intent |
+| `dynamic` | ✓ | yes | optional | List, Item Details — bind to a source via `data_binding` |
+| `extension` | ✓ | yes | varies | sys-geo-md-mirror (renderer hooks, not in-page UI) |
+
+Set with `set_component_kind(component_id, kind)`. Server-side CHECK constraints enforce invariants — `kind="dynamic"` requires `block_type` + non-empty `sources` to be set on the row first, or the PATCH 400s.
+
+### Curate for findability
+
+If you create a component clients should be able to find via intent search, set the discovery axes after publishing:
+
+```
+set_component_agent_meta(
+  component_id = "...",
+  mood = ["calm", "editorial"],
+  brand_fit_tags = ["saas", "agency"],
+  scene_type = "feature-grid",
+  agent_meta = {
+    interaction_pattern: "static",
+    placement: "above-fold",
+    conversion_strategy: "education"
+  }
+)
+```
+
+Same shape for `set_bg_video_agent_meta` (super_admin) and `set_site_template_agent_meta` (super_admin) but with the per-asset agent_meta keys.
+
+### Insert flow
+
+```
+marketplace_search(mood=["calm"], asset_types=["bg_video"])     → pick a slug
+content_insert_section(page_id, component_slug="sys-bg-video",
+                       props={video_slug: "<chosen>"},
+                       position="start", dry_run=true)            → confirm_token
+content_insert_section(... confirm_token=<token>)                → committed; page in draft
+content_publish_page(page_id, dry_run=true) → confirm           → published
+content_deploy_site_production(confirm_token=...)               → live on edge
+```
+
+Full recipe: `skills/recipes/marketplace-search-and-insert/`. Runnable: `examples/marketplace-search-and-insert.sh`.
+
+---
+
 ## GitHub
 
 - Public repo: https://github.com/martinshein/SpideriQ-ai/tree/main/SpiderPublish

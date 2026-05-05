@@ -165,3 +165,18 @@ Files up to 500 MB are accepted (raised from 10 MB on 2026-04-30). The CLI's `bg
 | Using wrong auth for public vs dashboard endpoints | 401 or wrong data | Public `/content/*` uses `X-Content-Domain`, dashboard uses Bearer |
 | Not checking deploy readiness | Deploying a half-configured site | `content_deploy_readiness` before deploy-preview |
 | Hitting `/api/v1/dashboard/content/...` from a bound directory | Works but carries Deprecation headers | The CLI/MCP auto-rewrites to scoped URLs — only raw `curl` skips the rewrite |
+
+## Marketplace V2 (Phase G — May 2026)
+
+The agent-discovery surface (`marketplace_search`, `list_data_sources`, `set_*_agent_meta`, `set_component_kind`) shipped 2026-05-05. New behaviour, new pitfalls.
+
+| Gotcha | What Happens | Fix |
+|--------|-------------|-----|
+| Passing `mood: ["calm", "editorial"]` to `marketplace_search` expecting an AND-narrowing | Returns rows where mood overlaps EITHER value (any-of match against the TEXT[] column) — wider than expected | Pass a single value per axis for AND-style narrowing (`mood: ["calm"]`). Cross-axis is already AND (`mood AND palette AND brand_fit AND scene_type`). |
+| Setting `kind="dynamic"` on a row missing `block_type` | DB CHECK constraint 400s with `chk_components_block_type_dynamic` | Set `block_type` (+ non-empty `sources`) via `content_update_component` first, OR pass kind+block_type+sources together in `content_create_component` |
+| Putting `mood` / `palette` / `brand_fit_tags` / `scene_type` inside `agent_meta` | Silent no-op — the universal axes are top-level columns, agent_meta is a separate JSONB | Pass them as siblings of `agent_meta` in the request body |
+| `agent_meta: {pace: "turbo"}` typo | 422 with the violating field name | Vocabulary is strict (`extra="forbid"` Pydantic). Pull the canonical vocab from `template_get_help` or `skills/content-platform/schema.yaml` `marketplace_v2_axes:` |
+| Binding `idap.lead` to a List block | 400 — idap.lead is `is_collection=false` (singleton). Only Item Details accepts it | Use `idap.businesses` / `idap.cities` / `posts` for List bindings; reserve `idap.lead` for Item Details on per-request lead context |
+| Calling `set_bg_video_agent_meta` from a project-scoped token | 403 super_admin-required | The bg-video + site-template catalogs are global — only super_admin can mutate. Components are per-tenant, so `set_component_agent_meta` works with the project token. |
+| Forgetting that `set_*` mutation tools default `dry_run=true` | First call returns a preview envelope + `confirm_token`, no mutation | Either pass `dry_run=false` explicitly OR call once for preview then again with `confirm_token=<token>` (recommended — same Phase 11+12 pattern as deploy/publish/delete) |
+| `palette` rejected with "list too long" | Cap is 12 entries on the write path | Trim the palette to ≤12. The catalog leans on a small consistent vocabulary (monochrome, deep-blue, cinematic, …) — long lists don't help search precision. |

@@ -1,11 +1,11 @@
 name: content-platform
-version: "2.2.0"
+version: "2.3.0"
 tier: 1
 description: >
   Reference catalog of the SpiderPublish content-platform MCP tools.
   Each entry names the tool, its category, and a one-line use case.
   The canonical JSON Schema for each tool lives in `@spideriq/mcp-publish` —
-  this file is human/agent reading. Matches `@spideriq/mcp-publish@1.0.0`.
+  this file is human/agent reading. Matches `@spideriq/mcp-publish@1.5.0`.
 
   v2.1.0 (2026-04-24): added `auth.get_whoami`, `link_audit.content_audit_links`,
   `component_preview.component_preview`, plus `auto_extract_css`, `chrome_auto_skip`,
@@ -14,6 +14,11 @@ description: >
   v2.2.0 (2026-04-24): added `duplicate.*` primitives (`content_duplicate_page` /
   `_block` / `_post` / `_doc`). Phase A of the template-gallery / section-library /
   import-adapter follow-on plan. Every later phase composes on these.
+
+  v2.3.0 (2026-05-05): Marketplace V2 agent surface — 6 new tools for
+  finding marketplace assets by intent (mood / palette / brand-fit /
+  scene-type) and curating discoverability metadata. See
+  `marketplace_v2_axes` block at the end for the full vocabulary.
 
 tools:
   pages:
@@ -127,6 +132,18 @@ tools:
     - content_duplicate_block          # body: {position?: 'before'|'after'|<int>}; deep-copies one block in place
     - content_duplicate_post           # body: {new_slug?}; returns new draft PostResponse
     - content_duplicate_doc            # body: {new_slug?}; copy lives as a sibling under the same parent_id
+  marketplace:
+    # 2026-05-05 (Phase G): agent-discovery surface across the 3 marketplace
+    # tables (bg-videos, components, site-templates). Search filters on the
+    # 4 universal axes (mood / palette / brand_fit_tags / scene_type) +
+    # per-asset agent_meta JSONB. The 4 mutation tools are Phase 11+12 gated
+    # and default dry_run=true.
+    - marketplace_search                 # GET /content/marketplace/search — cross-table by mood/palette/brand_fit/scene_type/agent_meta/asset_types
+    - list_data_sources                  # GET /content/data-sources — 9 internal sources for kind='dynamic' bindings (parent_id walk for IDAP)
+    - set_component_kind                 # PATCH /components/{id} kind ∈ static|interactive|dynamic|extension. Phase A CHECK constraints backstop invariants.
+    - set_component_agent_meta           # PATCH /components/{id} mood/palette/brand_fit_tags/scene_type/agent_meta (ComponentAgentMeta, extra='forbid')
+    - set_bg_video_agent_meta            # PATCH /bg-videos/{slug} same shape but BgVideoAgentMeta keys; super_admin only
+    - set_site_template_agent_meta       # PATCH /site-templates/{slug} same shape but SiteTemplateAgentMeta keys; super_admin only
 
 gated_with_dry_run:
   - content_publish_page
@@ -141,6 +158,12 @@ gated_with_dry_run:
   - component_rollback
   - directory_delete_listing
   - directory_delete_category
+  # Marketplace V2 (Phase G, 2026-05-05) — default dry_run=true
+  - set_component_kind
+  - set_component_agent_meta
+  - set_bg_video_agent_meta
+  - set_site_template_agent_meta
+  - content_insert_section
 
 blog_workflow:
   body_format: tiptap_json
@@ -204,3 +227,91 @@ canonical_see_also:
   - recipes/component-rollback
   - recipes/link-audit
   - recipes/tilda-migration
+  - recipes/marketplace-search-and-insert
+
+# ─────────────────────────────────────────────────────────────────────────
+# Marketplace V2 — agent-discovery vocabulary (Phase G, 2026-05-05)
+# ─────────────────────────────────────────────────────────────────────────
+# Used by marketplace_search filters AND by set_*_agent_meta when curating
+# an asset for findability. Strict at the API boundary — unknown values 422.
+# Vocabulary growth ships via SDK release, not via DB migration.
+
+marketplace_v2_axes:
+  universal:
+    # 4 columns shared across content_components / content_bg_videos /
+    # content_site_templates. Top-level fields, NOT inside agent_meta.
+    mood:
+      type: "TEXT[] (any-of match in marketplace_search)"
+      values: [calm, energetic, bold, confident, dreamy, futuristic, urban,
+               minimal, warm, sensory, editorial, professional, friendly,
+               clear, technical, credible]
+    palette:
+      type: "TEXT[] (free-form, capped at 12 entries on write)"
+      common_values: [monochrome, deep-blue, cream, neutral-warm, nature-green,
+                       warm-earth, neon-accent, warm-orange, rich-brown,
+                       cinematic, blue-night, brand-led]
+    brand_fit_tags:
+      type: "TEXT[] (any-of match)"
+      values: [saas, agency, ecommerce, fintech, real-estate, hospitality,
+               restaurant, wellness, healthcare, blog, publication, personal,
+               tech, design, consulting, outdoor, lifestyle]
+    scene_type:
+      type: "VARCHAR (single value)"
+      component_values: [hero-bold, feature-grid, pricing-tiers, social-proof,
+                          faq-accordion, conversion-cta, navigation-header,
+                          navigation-footer, data-collection-form,
+                          editorial-content, team-grid]
+      bg_video_values: [city-aerial, nature-landscape, abstract-motion,
+                         food-prep, people-lifestyle, tech-hardware]
+      site_template_values: [marketing-site, docs-site, directory-site,
+                              portfolio-site]
+
+  per_asset:
+    # JSONB column on each table. Pydantic-validated with extra='forbid' —
+    # unknown keys 422. Pass to marketplace_search as `agent_meta` filter,
+    # to set_*_agent_meta as the body.
+    bg_video:
+      pace: [slow, medium, fast]                      # slow=meditative, medium=narrative, fast=energetic
+      time_of_day: [dawn, day, dusk, night]
+      weather: [clear, cloudy, rain, snow, fog, stormy]   # NULL = indoor / abstract
+      has_people: bool
+      aspect_ratio: ["16:9", "9:16", "1:1", "4:3", "21:9"]
+      has_audio: bool
+      music_tempo_bpm: "int 20-300 (only meaningful when has_audio=true)"
+      transcript: "string ≤2000 chars"
+    component:
+      interaction_pattern: [static, click, hover, scroll, timer, form, drag]
+      trigger_kind: [page-load, scroll-into-view, click, hover, exit-intent,
+                      timer-fixed-date, timer-elapsed, form-submit, geo-match, none]
+      placement: [above-fold, below-fold, side-rail, modal, toast, footer, header, any]
+      motion_safety: bool                             # TRUE = honours prefers-reduced-motion
+      accessibility_notes: "string ≤1000 chars"
+      conversion_strategy: [primary-cta, secondary-cta, trust, scarcity,
+                             social-proof, education, navigation, none]
+    site_template:
+      page_count: "int 1-200"
+      has_blog: bool
+      has_pricing: bool
+      has_directory: bool                             # programmatic SEO target
+      has_booking: bool                               # SpiderBook integration
+      conversion_strategy: "(same as component.conversion_strategy)"
+      style_aesthetic: [minimal, bold, editorial, playful, premium, technical, brutalist, soft]
+      component_set: "string[] of component slugs the template ships with (≤100)"
+
+  data_sources:
+    # 9 entries returned by list_data_sources. Use as source_id when binding
+    # kind='dynamic' components.
+    internal:
+      - {id: posts,           label: Posts,                  is_collection: true}
+      - {id: authors,         label: Authors,                is_collection: true}
+      - {id: categories,      label: Categories,             is_collection: true}
+      - {id: tags,            label: Tags,                   is_collection: true}
+    idap:
+      - {id: idap.countries,  label: IDAP Countries,         is_collection: true,  parent_id: null}
+      - {id: idap.cities,     label: IDAP Cities,            is_collection: true,  parent_id: idap.countries}
+      - {id: idap.streets,    label: IDAP Streets,           is_collection: true,  parent_id: idap.cities}
+      - {id: idap.businesses, label: IDAP Businesses,        is_collection: true,  parent_id: idap.cities}
+    singleton:
+      - {id: idap.lead,       label: IDAP Lead (singleton),  is_collection: false, parent_id: null}
+        # idap.lead returns one row scoped to the visitor's request — only
+        # Item Details blocks accept it. List blocks 400 on this source_id.

@@ -43,6 +43,28 @@ Multi-tenant content management: pages, blog posts, docs, navigation, site setti
 | Preview a single component without deploying | `component_preview(component_id, props, viewport?)` — returns Shadow-DOM-wrapped HTML ready for `<iframe srcdoc>` |
 | Port a Tilda/Webflow HTML section with inline `<style>` blocks | `content_create_component(..., auto_extract_css=true)` — server moves `<style>` into `css` field automatically |
 | Page with a custom header component (avoid double-chrome) | Mark the component with `category="header"` — renderer auto-suppresses the native section |
+| Find a hero/bg-video/template by intent (mood, palette, brand-fit) | `marketplace_search(mood=["calm"], asset_types=["bg_video"], limit=5)` — cross-table search; full vocab in `schema.yaml` `marketplace_v2_axes:` |
+| Discover a Dynamic block's source options | `list_data_sources()` — returns the 9 internal sources; pass `parent_id=idap.countries` to walk the IDAP geo hierarchy |
+| Insert a marketplace asset into a page | `marketplace_search(...)` → `content_insert_section(page_id, component_slug, props, dry_run=true)` → confirm_token → see `recipes/marketplace-search-and-insert/` |
+| Promote a custom component into the marketplace 4-class taxonomy | `set_component_kind(component_id, kind=<static\|interactive\|dynamic\|extension>)` (gated). For `kind="dynamic"`, set `block_type` + `sources` first |
+| Curate an asset for agent discovery | `set_component_agent_meta` / `set_bg_video_agent_meta` / `set_site_template_agent_meta` — same shape, different per-asset agent_meta keys |
+
+## May 2026 additions (v2.3.0) — Marketplace V2 agent surface
+
+Phase G shipped the agent-discovery layer over the marketplace. Six new tools turn the existing catalog into something an agent can search by **intent** instead of by component name.
+
+| Tool | Auth | Use case |
+|---|---|---|
+| `marketplace_search` | public | "Find me a calm cinematic bg-video for a luxury hotel" — cross-table by mood/palette/brand_fit/scene_type/agent_meta/asset_types |
+| `list_data_sources` | public | "What sources can a List block bind to?" — registry browse with parent_id hierarchy walk for IDAP geo |
+| `set_component_kind` | dashboard, gated | Set the 4-class behavioural taxonomy. DB CHECK constraints backstop invariants (e.g. `kind="dynamic"` requires `block_type` already set on the row) |
+| `set_component_agent_meta` | dashboard, gated | Patch ComponentAgentMeta + universal axes |
+| `set_bg_video_agent_meta` | super_admin, gated | Same shape but BgVideoAgentMeta keys (pace, time_of_day, weather, has_people, aspect_ratio, …) |
+| `set_site_template_agent_meta` | super_admin, gated | Same shape but SiteTemplateAgentMeta keys (page_count, has_blog, has_pricing, style_aesthetic, …) |
+
+The 4 mutation tools default `dry_run=true` per starter-kit convention — call once for a preview + `confirm_token`, then call again with the token to commit.
+
+Full vocabulary (mood / palette / brand_fit / scene_type values + per-asset agent_meta keys) is in [`schema.yaml`](./schema.yaml) under `marketplace_v2_axes:`. Recipe: [`recipes/marketplace-search-and-insert`](../recipes/marketplace-search-and-insert/). Runnable example: [`examples/marketplace-search-and-insert.sh`](../../examples/marketplace-search-and-insert.sh).
 
 ## Apr 2026 additions (v2.1.0)
 
