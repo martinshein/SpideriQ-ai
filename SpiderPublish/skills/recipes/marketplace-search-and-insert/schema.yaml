@@ -1,0 +1,89 @@
+name: marketplace-search-and-insert
+tier: 2
+description: >
+  Find a marketplace asset by intent (mood / palette / brand-fit /
+  scene_type) and insert it into a page. Pairs marketplace_search
+  (Phase G read tool) with content_insert_section (Phase 11+12 gated).
+  Optional set_component_agent_meta for curating an asset post-insert.
+
+inputs:
+  page_id:
+    type: string
+    required: true
+    hint: "UUID of the target page (run content_list_pages to find it)."
+  intent_filters:
+    type: object
+    required: true
+    hint: >
+      Subset of {mood, palette, brand_fit, scene_type, agent_meta,
+      asset_types}. mood/palette/brand_fit are arrays; scene_type is
+      a single string; agent_meta is an object of per-asset filters.
+  position:
+    type: any
+    default: "end"
+    hint: "'start' | 'end' | 'before' | 'after' | <int>"
+  anchor_block_id:
+    type: string
+    required: false
+    hint: "Required when position is 'before' or 'after'."
+
+steps:
+  - id: search
+    description: Search the marketplace by intent.
+    tool: marketplace_search
+    args:
+      mood: "{{ intent_filters.mood }}"
+      palette: "{{ intent_filters.palette }}"
+      brand_fit: "{{ intent_filters.brand_fit }}"
+      scene_type: "{{ intent_filters.scene_type }}"
+      agent_meta: "{{ intent_filters.agent_meta }}"
+      asset_types: "{{ intent_filters.asset_types }}"
+      limit: 10
+    output: results
+
+  - id: pick
+    description: >
+      Pick the first result whose asset_type is the kind your page block
+      expects. For sys-bg-video → bg_video; for sys-* component blocks →
+      component; for full-site cloning → site_template.
+    output: chosen
+
+  - id: dry_run_insert
+    description: Preview the insertion. Returns a confirm_token.
+    tool: content_insert_section
+    args:
+      page_id: "{{ inputs.page_id }}"
+      component_slug: "sys-bg-video | <chosen.slug for components>"
+      component_version: null
+      props:
+        video_slug: "{{ chosen.slug if chosen.asset_type == 'bg_video' else null }}"
+      position: "{{ inputs.position }}"
+      anchor_block_id: "{{ inputs.anchor_block_id }}"
+      dry_run: true
+    output: preview
+
+  - id: confirm_insert
+    description: Commit the insertion using the confirm_token from preview.
+    tool: content_insert_section
+    args:
+      page_id: "{{ inputs.page_id }}"
+      component_slug: "{{ preview.preview.component_slug }}"
+      props: "{{ preview.preview.props }}"
+      position: "{{ inputs.position }}"
+      confirm_token: "{{ preview.confirm_token }}"
+    output: insertion
+
+outputs:
+  block_id: "{{ insertion.new_block_id }}"
+  insertion_index: "{{ insertion.insertion_index }}"
+  asset_chosen: "{{ chosen.slug }}"
+
+notes: |
+  - The preview-confirm flow is mandatory for content_insert_section
+    (Phase 11+12). Skip dry_run only when you've already validated the
+    intent in a separate session.
+  - `marketplace_search` is a public read — no auth required, but
+    authenticated calls get the rate-limited tier instead of strict-anon.
+  - For curators: after the page renders well, lock in agent-discoverability
+    by calling set_component_agent_meta with the same intent filters used
+    for search. That makes the same asset findable for the next agent.
