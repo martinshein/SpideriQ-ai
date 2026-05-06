@@ -15,11 +15,11 @@ GET /api/v1/dashboard/projects/{pid}/content/audit/links
 # → { valid_count, broken: [{path, source, reason}], proposed_redirects, known_redirects }
 ```
 
-**MCP tool:** `content_audit_links()`
+**MCP tool:** `content_audit_links()` — ships in `@spideriq/mcp-publish@1.6.0+` and kitchen-sink `@spideriq/mcp@1.6.0+`. No required input args.
 
-**CLI:** nothing direct yet — use the shell example below.
+**CLI:** `spideriq content audit-links [--json]` — ships in `@spideriq/cli@1.6.0+`. Pretty-prints broken links with their JSONPath-shaped `source` strings + proposed redirects. Exits non-zero when broken links are present so CI / pre-push hooks gate cleanly. `--json` emits the raw envelope.
 
-**Runnable example:** [examples/audit-links.sh](../../../examples/audit-links.sh).
+**Runnable example:** [examples/audit-links.sh](../../../examples/audit-links.sh) — covers both the CLI path (preferred) and the raw HTTP path (fallback for shells without Node).
 
 ## What gets scanned
 
