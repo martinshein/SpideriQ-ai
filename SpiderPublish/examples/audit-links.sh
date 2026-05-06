@@ -1,6 +1,17 @@
 #!/bin/bash
 # SpiderPublish — audit internal links across pages + nav (2026-04-24)
 #
+# CLI alternative (preferred — @spideriq/cli@1.6.0+):
+#
+#     npx @spideriq/cli content audit-links            # pretty-print
+#     npx @spideriq/cli content audit-links --json     # raw envelope
+#
+#   The CLI exits non-zero when broken links are present, so it slots into
+#   CI / pre-push hooks without extra plumbing. The MCP tool is named
+#   `content_audit_links` — same response shape, no required args.
+#
+# Raw HTTP path (this script — fallback for shells without Node):
+#
 # One GET validates every `/path` reference in every published page's blocks
 # and every navigation menu against the published-page roster + active redirects.
 #
