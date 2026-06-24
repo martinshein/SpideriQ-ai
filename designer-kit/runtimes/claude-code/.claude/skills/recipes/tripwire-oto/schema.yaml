@@ -1,0 +1,70 @@
+name: tripwire-oto
+tier: 3
+description: >
+  Build a commerce funnel that sells a product — a tripwire checkout, a one-time-offer (OTO)
+  upsell, and thank-you — by forking the tripwire-oto template, customising the copy, publishing
+  with live_mode=true, and reading orders back. Uses only the public API via a PAT.
+
+inputs:
+  funnel_name:
+    type: string
+    required: true
+    hint: "Label for the new draft funnel, e.g. 'Spring tripwire'"
+  checkout_copy:
+    type: string
+    required: false
+    hint: "Headline/body for the checkout node (optional — the template ships sensible copy)"
+  oto_copy:
+    type: string
+    required: false
+    hint: "Headline/body for the one-time-offer upsell node (optional)"
+
+steps:
+  - id: list_templates
+    description: "List the commerce starters"
+    tool: funnel_template_list
+    args:
+      kind: "commerce"
+    output: templates
+  - id: fork
+    description: "Fork the tripwire-oto starter into a new draft funnel"
+    tool: funnel_template_apply
+    args:
+      slug: "tripwire-oto"
+      name: "{{ inputs.funnel_name }}"
+    output: funnel
+  - id: customise
+    description: "Customise the checkout + OTO node copy (skip if defaults are fine)"
+    tool: flow_update_node
+    args:
+      flow_id: "{{ fork.flow_id }}"
+    output: updated
+  - id: publish
+    description: "Publish the funnel for real traffic (live_mode=true, NOT a status flip)"
+    output: published
+  - id: verify
+    description: "Visual-check the published funnel page"
+    tool: content_visual_check
+    args:
+      page_url: "{{ fork.public_url }}"
+      expected_no_text: ["couldn't load"]
+    output: visual
+  - id: read_orders
+    description: "After a test purchase, read the order back"
+    tool: commerce_order_list
+    args:
+      status: "succeeded"
+    output: orders
+
+outputs:
+  flow_id: "{{ fork.flow_id }}"
+  public_url: "{{ fork.public_url }}"
+
+notes: |
+  - Create a commerce funnel by forking a template (funnel_template_apply) — NEVER raw flow_create.
+  - Edge condition operators are long-form: op:"equal", never "eq" (no alias; "eq" silently never matches).
+  - Publish with live_mode=true, not a status flip.
+  - Test in Stripe test mode with card 4242 4242 4242 4242. OTO accept = charge off-session; decline = no-op.
+  - Orders are read-only (commerce_order_list/get/stats/export). total_amount_cents is minor-units (cents).
+  - You can author the whole funnel EXCEPT creating the product itself — product creation is the
+    Medusa Admin UI today; the agent-native product surface is coming soon.
