@@ -322,3 +322,18 @@ Put VayaPin locations on a site as cards — on a blog post (auto strip) or any 
 | Pin id case / format | `bb:tapas` vs `BB:TAPAS` — ids are normalized to UPPERCASE `COUNTRY:SLUG` | Use `COUNTRY:SLUG`; case is normalized for you, but malformed entries (no colon) are dropped. |
 | Setting both `pins` and a query on the `sys-vayapin-cards` block | Only `pins` is used — the query fields are ignored | Pick one mode: `pins` for an exact set, OR `country`/`city`/`category`/`q` for a live query. |
 | Trying to create `sys-vayapin-cards` via `content_create_component` | It's a global system block, already installed — you can't recreate it | Reference it by slug in a page's `blocks[]` (see `components/sys-vayapin-cards.json`). |
+
+## Commerce Funnels (2026-06-24)
+
+Sell a product through a checkout + one-time-offer (OTO) funnel. Same Flow primitive as pages /
+forms / booking; new pitfalls.
+
+| Gotcha | What Happens | Fix |
+|--------|-------------|-----|
+| Building a commerce graph with raw `flow_create` + `flow_add_node` | Fights the server-side graph validator (checkout/OTO invariants) — errors or a broken funnel | Create by forking a template: `funnel_template_apply { slug: "tripwire-oto" }`. The template ships a valid graph + seed pages. |
+| Edge condition with `op: "eq"` | Silently never matches — the buyer is never routed (and the OTO charge may already have fired) | Operators are long-form: `op: "equal"` (or `not_equal`, `greater_than`, …). There is no `"eq"` alias. |
+| Flipping a `status` field to publish a funnel | Doesn't go live | Publish with `live_mode=true` — that's the publish switch. |
+| Mixing `total_amount_cents` with Medusa `unit_price` | Wrong totals | `total_amount_cents` is minor-units (cents → divide by 100); Medusa `unit_price` is major-units. Never floating-point currency across the two. |
+| Expecting to create a product through the agent tools | There is no product-creation MCP/CLI tool yet | Create products in the Medusa Admin UI today; the agent-native product surface is coming soon. You can author the entire funnel otherwise. |
+| Trying to edit/delete an order | Orders are read-only | `commerce_order_list` / `_get` / `_stats` / `_export_csv` only. Orders are written automatically on a succeeded payment. |
+| Testing checkout with a live card | Real charge | Keep Stripe in test mode; use card `4242 4242 4242 4242`, any future expiry, any CVC. |

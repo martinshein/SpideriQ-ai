@@ -58,6 +58,7 @@ For task-specific recipes, paste the relevant skill body from [shared/recipes/](
 - **Build a Login Page — Authentication Components + auth_target** — `shared/recipes/build-a-login-page/SKILL.md`
 - **Build a Dynamic Component — Live, Server-Filtered Collections** — `shared/recipes/build-a-dynamic-component/SKILL.md`
 - **Members-Gated Page — Site Members + per-page access** — `shared/recipes/members-gated-page/SKILL.md`
+- **Tripwire + OTO Commerce Funnel** — `shared/recipes/tripwire-oto/SKILL.md`
 
 ## 4. Optional: build via the CLI
 

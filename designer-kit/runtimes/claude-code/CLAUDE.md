@@ -1154,6 +1154,40 @@ Validation: `form_validate` runs whole-flow structural validation client-side �
 
 **Full guide:** [shared/core-skills/forms/](./core-skills/forms/) (kit-internal path; degit users see this under their project's `core-skills/forms/`).
 
+### Commerce Funnels — sell a product (Flow primitive, 2026-06-24)
+
+Pages, forms, funnels, booking widgets, and **commerce funnels** are all the **same primitive** — a
+**Flow** (a graph of page *nodes* + event *edges*). `kind` (`page` / `form` / `funnel` / `booking` /
+`commerce`) is a label, not a separate product. A **commerce funnel** carries `checkout` + one-time-
+offer (`oto`) nodes, takes real Stripe payments, and lands a canonical order.
+
+**Create by forking a template — never hand-build the graph** (the server validates commerce graph
+invariants):
+
+```bash
+funnel_template_list { kind: "commerce" }     # → single-product-checkout · tripwire-oto · subscription-checkout
+funnel_template_apply { slug: "tripwire-oto", name: "..." }   # → a NEW DRAFT funnel; capture flow_id
+# customise node copy with flow_update_node; publish with live_mode=true
+```
+
+**Read orders** (read-only — orders are written automatically on a succeeded payment):
+
+```bash
+commerce_order_list { status: "succeeded" }   # spideriq commerce orders list
+commerce_order_get { order_id }                # spideriq commerce orders get <id>
+commerce_order_stats { window: "30d" }         # revenue, orders, success rate, AOV
+commerce_order_export_csv { ... }              # spideriq commerce orders export
+```
+
+Rules that trip agents up:
+- **Edge operators are long-form** — `op: "equal"`, never `"eq"` (no alias; `"eq"` silently never matches).
+- **Publish with `live_mode=true`**, not a `status` flip.
+- **`total_amount_cents` is minor-units (cents)** — divide by 100; don't mix with Medusa major-unit `unit_price`.
+- **Stripe TEST card `4242 4242 4242 4242`** while building. OTO accept charges off-session; decline is a no-op; both route to thank-you.
+- **You can author the whole funnel EXCEPT creating the product** — product creation uses the Medusa Admin UI today; the agent-native product surface is coming soon.
+
+**Full recipe:** [shared/recipes/tripwire-oto/](./recipes/tripwire-oto/) + the runnable [examples/build-tripwire-funnel.sh](./examples/build-tripwire-funnel.sh).
+
 ### IDAP (CRM Data)
 ```bash
 GET /api/v1/idap/businesses?limit=20&include=emails&format=yaml
@@ -1549,6 +1583,7 @@ Tier 3 `impl.ts` files use only Node 18+ stdlib (`fetch`, `fs`, `path`) — zero
 - [Build a Login Page — Authentication Components + auth_target](.claude/skills/recipes/build-a-login-page/SKILL.md) — Add a sign-in / forgot-password / reset-password page using the designable Authentication components (spideriq/auth-login, auth-forgot-password, auth-reset-password).
 - [Build a Dynamic Component — Live, Server-Filtered Collections](.claude/skills/recipes/build-a-dynamic-component/SKILL.md) — Build a kind='dynamic' component that binds a live CMS collection (posts / authors / categories / tags / changelog) with server-side filtering, then place it on a page and deploy.
 - [Members-Gated Page — Site Members + per-page access](.claude/skills/recipes/members-gated-page/SKILL.md) — Put a page behind a members login wall (Site Members — the site's OWN members, not the SpiderIQ dashboard).
+- [Tripwire + OTO Commerce Funnel](.claude/skills/recipes/tripwire-oto/SKILL.md) — Build a commerce funnel that sells a product — a tripwire checkout, a one-time-offer (OTO) upsell, then thank-you — taking real Stripe payments and landing a canonical order.
 
 ### Core MCP-namespace skills
 

@@ -241,6 +241,13 @@
       "ki_index": 27,
       "title": "Members-Gated Page — Site Members + per-page access",
       "summary": "Put a page behind a members login wall (Site Members — the site's OWN members, not the SpiderIQ dashboard). Every page has an access level: public (default) | logged_in (any member of this site) | group-restricted (named groups only). Set it with page_set_access (access + allowed_groups), ensure a login page on the SAME site uses auth_target=site_members (the member cookie is host-only ⇒ same-host sign-in), then publish + deploy so the Cloudflare edge enforces the gate, and visual-check (anonymous → redirected to /login; member → renders). Members / groups / invitations / SSO / Data Restrictions are managed in the dashboard Content → Users area. Use whenever the user asks for 'a members-only page', 'gate this page behind login', 'only logged-in users should see X', 'a client portal', or 'restrict this page to a group'."
+    },
+    {
+      "id": "tripwire-oto",
+      "kind": "recipe",
+      "ki_index": 28,
+      "title": "Tripwire + OTO Commerce Funnel",
+      "summary": "Build a commerce funnel that sells a product — a tripwire checkout, a one-time-offer (OTO) upsell, then thank-you — taking real Stripe payments and landing a canonical order. Create by forking a template (funnel_template_apply — single-product-checkout / tripwire-oto / subscription-checkout), NEVER raw flow_create. Customise node copy with flow_update_node; edge operators are long-form (op:\"equal\", never \"eq\"); publish with live_mode=true; test in Stripe test mode (card 4242 4242 4242 4242 — OTO accept charges off-session, decline is a no-op). Read orders read-only via commerce_order_list/get/stats/export_csv (total_amount_cents is minor-units). You can author the whole funnel except creating the product itself — product creation uses the Medusa Admin UI today; the agent-native surface is coming soon. Use whenever the user asks to 'sell a product', 'build a checkout/tripwire/upsell/OTO funnel', 'set up a commerce funnel', or 'read my orders/revenue'."
     }
   ]
 }
