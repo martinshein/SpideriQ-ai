@@ -832,6 +832,44 @@ Full vocab + per-asset `agent_meta` keys (BgVideoAgentMeta / ComponentAgentMeta 
 - [skills/recipes/marketplace-search-and-insert/](skills/recipes/marketplace-search-and-insert/) — Find a marketplace asset by intent, insert it into a page (May 2026)
 - [skills/recipes/marketplace-suggest-agent-meta/](skills/recipes/marketplace-suggest-agent-meta/) — **NEW (1.7.0)** Suggest metadata for a newly uploaded asset, then apply via `set_*_agent_meta`
 
+## AI Agent components (June 2026)
+
+The marketplace has an **AI Agents** category: brandable listings that mount a live AI agent onto a
+page in one of four **form-factors**. Browse them under **Marketplace → AI Agents** in the
+dashboard, or over the public content API at
+`GET /content/marketplace/components?category=agent`.
+
+| `form_factor` | How it mounts | Use for |
+|---|---|---|
+| `section` | A full page section | a "talk to sales" band |
+| `widget` | An inline in-flow block | an agent inside a card |
+| `concierge` | A floating launcher + slide-out panel | a site-wide support bubble |
+| `headless` | Transport + state only — you build the UI | a fully custom chat experience |
+
+**Author one with `content_create_agent_component`** (in `@spideriq/mcp-publish`). Give it a slug,
+a name, and a form-factor; it bakes the whole component — markup + your brand skin — so it mounts
+consistently the first time:
+
+```
+content_create_agent_component({
+  slug: "acme-sdr-widget",
+  name: "Acme SDR",
+  form_factor: "widget",          // section | widget | concierge | headless
+  role: "sdr",                    // optional
+  skin: { primary: "#5b2be7" }     // baked INLINE into the listing's template
+})
+```
+
+Four ready-to-use starter agents ship seeded — clone one as a starting point, or author your own.
+The live **conversation** activates when you hire an agent from a partner agent platform and bind
+it to your site; browsing, authoring, and mounting the surface is available now.
+
+**Filter by form-factor — the parameter differs by surface.** On the **public** content API use
+the dotted JSONB path `?agent_meta.form_factor=widget`; in the **dashboard** API use the scalar
+`?agent_form_factor=widget`. The wrong one for an endpoint is silently ignored (you get all agents
+back). The `content_list_marketplace_components` tool's `agent_form_factor` argument maps to the
+public dotted form for you.
+
 ## Skills — Curated Recipes
 
 Multi-step workflows that compose MCP tools. Live at **[skills/](skills/)** in this starter kit.

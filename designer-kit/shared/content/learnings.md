@@ -337,3 +337,14 @@ forms / booking; new pitfalls.
 | Expecting to create a product through the agent tools | There is no product-creation MCP/CLI tool yet | Create products in the Medusa Admin UI today; the agent-native product surface is coming soon. You can author the entire funnel otherwise. |
 | Trying to edit/delete an order | Orders are read-only | `commerce_order_list` / `_get` / `_stats` / `_export_csv` only. Orders are written automatically on a succeeded payment. |
 | Testing checkout with a live card | Real charge | Keep Stripe in test mode; use card `4242 4242 4242 4242`, any future expiry, any CVC. |
+
+## AI Agent components (2026-06)
+
+Browse and author AI-agent listings in the marketplace **AI Agents** category. New surface, new pitfalls.
+
+| Gotcha | What Happens | Fix |
+|--------|-------------|-----|
+| Putting the agent's styles in the component's `css` field | Silently ignored — the agent renders in a shadow DOM that bypasses the component `css` column | Bake the skin INLINE in the listing's template. `content_create_agent_component`'s `skin` argument does this for you. |
+| Filtering agents with the wrong query param for the endpoint | Returns ALL agents, not a narrowed set (looks like the filter is broken) | Public content API uses the **dotted** `?agent_meta.form_factor=widget`; the dashboard API uses the **scalar** `?agent_form_factor=widget`. `content_list_marketplace_components`'s `agent_form_factor` arg maps to the public form for you. |
+| Confusing the agent **component** with the agent **flow** | The component is the marketplace listing/mount; the flow is the live runtime | `content_create_agent_component` authors the listing; the runtime is hired from a partner agent platform. Browse a component to pick the look; hire an agent to make it talk. |
+| Expecting the agent to talk the moment it mounts | The surface renders but waits for its binding | The live conversation needs an agent hire + a bound site origin. Browsing/authoring/mounting is live now; the one-click hire flow is coming. |
