@@ -81,6 +81,6 @@ ids.
 
 ## Full reference
 
-https://docs.spideriq.ai/site-builder/custom-collections/ · render with
+https://publish.spideriq.ai/docs/ai-agents/custom-collections · render with
 [recipes/build-a-dynamic-component](../build-a-dynamic-component/SKILL.md) · the machine-readable
 schema is in `GET /api/v1/content/help` → the `custom_collections` stanza.

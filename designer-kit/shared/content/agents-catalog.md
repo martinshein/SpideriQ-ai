@@ -400,7 +400,7 @@ updateCollection(slug="case-studies", is_public=true)
 #   GET /api/v1/content/data-sources/case-studies/items
 ```
 
-**Records link to each other** (or to `posts`/`authors`) with simple relationship fields; a `depth` knob hydrates one level, batched (no N+1). **Gotchas:** slugs use hyphens not underscores (`case-studies`); unknown `data` fields are **rejected (422)**, not dropped; **reads use the record slug, writes use the record id**; publishing ≠ deploying; collection/record creates enforce your plan's `max_collections` / `max_records` caps (403). Render with **[skills/recipes/build-a-dynamic-component/](./skills/recipes/build-a-dynamic-component/SKILL.md)**. Full recipe: **[skills/recipes/define-a-custom-collection/](./skills/recipes/define-a-custom-collection/SKILL.md)** · Docs: https://docs.spideriq.ai/site-builder/custom-collections/.
+**Records link to each other** (or to `posts`/`authors`) with simple relationship fields; a `depth` knob hydrates one level, batched (no N+1). **Gotchas:** slugs use hyphens not underscores (`case-studies`); unknown `data` fields are **rejected (422)**, not dropped; **reads use the record slug, writes use the record id**; publishing ≠ deploying; collection/record creates enforce your plan's `max_collections` / `max_records` caps (403). Render with **[skills/recipes/build-a-dynamic-component/](./skills/recipes/build-a-dynamic-component/SKILL.md)**. Full recipe: **[skills/recipes/define-a-custom-collection/](./skills/recipes/define-a-custom-collection/SKILL.md)** · Docs: https://publish.spideriq.ai/docs/ai-agents/custom-collections.
 
 ### Dynamic Landing Pages
 URL: `/lp/{page_slug}/{google_place_id}` or `/lp/{page_slug}/{salesperson}/{google_place_id}`
