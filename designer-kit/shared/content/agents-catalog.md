@@ -375,6 +375,33 @@ directory_bulk_upsert_listings(
 
 No publish step. No deploy step. `city_slug` computed automatically from `city + state`. Full recipe: **[skills/recipes/directory/](./skills/recipes/directory/SKILL.md)** · Example: **[examples/directory-bulk-import.sh](./examples/directory-bulk-import.sh)**.
 
+### Custom Collections (define your own content type, v2.10.0+)
+
+When pages, posts, and docs don't fit, define your **own** content type — case studies, team, FAQs, products. You declare the schema, author the rows, and every published record renders as a first-class page (its own slug, SEO, pretty URL `/{route_base}/{slug}`, and a multi-format body: blocks / Tiptap / Markdown / HTML). The flow is **define → fill → publish → expose → render → deploy**.
+
+```
+# 1. Define the collection (schema you declare; 9 field types incl. relationship + blocks)
+createCollection(slug="case-studies", label="Case Studies",
+  schema_json={ fields: { title:{type:"text"}, client:{type:"text"}, summary:{type:"richtext"} } })
+
+# 2. Bulk-fill rows — 1–100 in ONE transaction (a bad row rejects the whole batch)
+bulkCreateCollectionRecords(collection="case-studies", records=[
+  { slug:"acme",  data:{ title:"Acme",  client:"Acme Co",   summary:"..." } },
+  { slug:"globex", data:{ title:"Globex", client:"Globex LLC", summary:"..." } }
+])
+
+# 3. Publish a row — a status change is the GATED transition (dry_run → confirm_token)
+updateCollectionRecord(collection="case-studies", record_id=<id>, status="published", dry_run=true)
+updateCollectionRecord(collection="case-studies", record_id=<id>, status="published", confirm_token="cft_...")
+
+# 4. Expose it, then render with a kind="dynamic" component (source_id = the collection slug)
+updateCollection(slug="case-studies", is_public=true)
+# → records live at /case-studies/acme; the full list reads at
+#   GET /api/v1/content/data-sources/case-studies/items
+```
+
+**Records link to each other** (or to `posts`/`authors`) with simple relationship fields; a `depth` knob hydrates one level, batched (no N+1). **Gotchas:** slugs use hyphens not underscores (`case-studies`); unknown `data` fields are **rejected (422)**, not dropped; **reads use the record slug, writes use the record id**; publishing ≠ deploying; collection/record creates enforce your plan's `max_collections` / `max_records` caps (403). Render with **[skills/recipes/build-a-dynamic-component/](./skills/recipes/build-a-dynamic-component/SKILL.md)**. Full recipe: **[skills/recipes/define-a-custom-collection/](./skills/recipes/define-a-custom-collection/SKILL.md)** · Docs: https://docs.spideriq.ai/site-builder/custom-collections/.
+
 ### Dynamic Landing Pages
 URL: `/lp/{page_slug}/{google_place_id}` or `/lp/{page_slug}/{salesperson}/{google_place_id}`
 
