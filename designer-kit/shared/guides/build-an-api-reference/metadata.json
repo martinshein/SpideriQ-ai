@@ -1,0 +1,10 @@
+{
+  "title": "Build an API reference (docs theme)",
+  "summary": "Turn a SpiderPublish project into a Stripe-class API reference. Use whenever the user says 'build API docs', 'create an API reference', 'import my OpenAPI/Swagger spec', 'document my API', or 'make docs like Stripe/ReadMe/Mintlify'. Walks through importing an OpenAPI 3.x / Swagger 2.0 spec (which stores structured per-operation data), applying the `docs` theme, and deploying — the result is a three-column reference (nav tree, prose + parameters, a pinned tabbed cURL/Python/JS/Go code panel) with Try-it and Ask-AI.",
+  "createdAt": "2026-07-20T00:00:00Z",
+  "updatedAt": "2026-07-20T00:00:00Z",
+  "references": [
+    "https://publish.spideriq.ai/docs/build-an-api-reference",
+    "SpiderPublish/shared/guides/create-page/artifacts/workflow.md"
+  ]
+}
