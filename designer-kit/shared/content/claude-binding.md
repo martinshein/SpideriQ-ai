@@ -70,7 +70,8 @@ All dashboard URLs below assume the CLI/MCP auto-injects `/projects/{pid}/` from
 1. **Read the reference first:** `template_get_help` MCP tool (or `GET /api/v1/content/help?format=yaml`) — includes `tasks` index, `getting_started` preamble, `chrome_override`, `theme_palette`, `session_binding`, `deploy_workflow` sections.
 2. **Settings:** `PATCH /dashboard/projects/{pid}/content/settings` — REQUIRED: `site_name`. Optional but recommended: `primary_color` (accent), `logo_light_url`, plus the full theme palette below. Gated: first call with `?dry_run=true`, then `?confirm_token=cft_...`
 3. **Navigation:** `PUT /dashboard/projects/{pid}/content/navigation/header` — menu items (not gated)
-4. **Pages:** `POST /dashboard/projects/{pid}/content/pages` — create with blocks (slug `home` for homepage; `template` picks the layout — see Page Templates below) (not gated)
+   An item may carry a `source` binding (`{kind: "folder", folder_id, depth}` or `{kind: "site", depth}`) instead of a `url`, so the menu is generated from the page tree and only ever lists **published** pages. The authenticated read deliberately returns the binding *un-expanded* — never write the expansion back. See "Folder-driven navigation" in the catalog.
+4. **Pages:** `POST /dashboard/projects/{pid}/content/pages` — create with blocks (slug `home` for homepage; `template` picks the layout — see Page Templates below) (not gated). Pass `is_folder: true` for a dashboard-only folder; `parent_id` and `index_page_id` on update move a page into a folder and pin the folder's landing page.
 5. **Publish:** `POST /dashboard/projects/{pid}/content/pages/{id}/publish` — REQUIRED: at least 1 published page. Gated.
 6. **Theme:** `POST /dashboard/projects/{pid}/templates/apply-theme` — REQUIRED: apply `default`. Gated.
 7. **Check readiness:** `content_deploy_readiness` MCP tool — verify all blocking checks pass.
