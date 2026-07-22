@@ -76,7 +76,8 @@ All dashboard URLs below assume the CLI/MCP auto-injects `/projects/{pid}/` from
 1. **Read the reference first:** `template_get_help` MCP tool (or `GET /api/v1/content/help?format=yaml`) — includes `tasks` index, `getting_started` preamble, `chrome_override`, `theme_palette`, `session_binding`, `deploy_workflow` sections.
 2. **Settings:** `PATCH /dashboard/projects/{pid}/content/settings` — REQUIRED: `site_name`. Optional but recommended: `primary_color` (accent), `logo_light_url`, plus the full theme palette below. Gated: first call with `?dry_run=true`, then `?confirm_token=cft_...`
 3. **Navigation:** `PUT /dashboard/projects/{pid}/content/navigation/header` — menu items (not gated)
-4. **Pages:** `POST /dashboard/projects/{pid}/content/pages` — create with blocks (slug `home` for homepage; `template` picks the layout — see Page Templates below) (not gated)
+   An item may carry a `source` binding (`{kind: "folder", folder_id, depth}` or `{kind: "site", depth}`) instead of a `url`, so the menu is generated from the page tree and only ever lists **published** pages. The authenticated read deliberately returns the binding *un-expanded* — never write the expansion back. See "Folder-driven navigation" in the catalog.
+4. **Pages:** `POST /dashboard/projects/{pid}/content/pages` — create with blocks (slug `home` for homepage; `template` picks the layout — see Page Templates below) (not gated). Pass `is_folder: true` for a dashboard-only folder; `parent_id` and `index_page_id` on update move a page into a folder and pin the folder's landing page.
 5. **Publish:** `POST /dashboard/projects/{pid}/content/pages/{id}/publish` — REQUIRED: at least 1 published page. Gated.
 6. **Theme:** `POST /dashboard/projects/{pid}/templates/apply-theme` — REQUIRED: apply `default`. Gated.
 7. **Check readiness:** `content_deploy_readiness` MCP tool — verify all blocking checks pass.
@@ -1062,6 +1063,33 @@ directory_bulk_upsert_listings(
 
 No publish step. No deploy step. `city_slug` computed automatically from `city + state`. Full recipe: **[skills/recipes/directory/](./skills/recipes/directory/SKILL.md)** · Example: **[examples/directory-bulk-import.sh](./examples/directory-bulk-import.sh)**.
 
+### Custom Collections (define your own content type, v2.10.0+)
+
+When pages, posts, and docs don't fit, define your **own** content type — case studies, team, FAQs, products. You declare the schema, author the rows, and every published record renders as a first-class page (its own slug, SEO, pretty URL `/{route_base}/{slug}`, and a multi-format body: blocks / Tiptap / Markdown / HTML). The flow is **define → fill → publish → expose → render → deploy**.
+
+```
+# 1. Define the collection (schema you declare; 9 field types incl. relationship + blocks)
+createCollection(slug="case-studies", label="Case Studies",
+  schema_json={ fields: { title:{type:"text"}, client:{type:"text"}, summary:{type:"richtext"} } })
+
+# 2. Bulk-fill rows — 1–100 in ONE transaction (a bad row rejects the whole batch)
+bulkCreateCollectionRecords(collection="case-studies", records=[
+  { slug:"acme",  data:{ title:"Acme",  client:"Acme Co",   summary:"..." } },
+  { slug:"globex", data:{ title:"Globex", client:"Globex LLC", summary:"..." } }
+])
+
+# 3. Publish a row — a status change is the GATED transition (dry_run → confirm_token)
+updateCollectionRecord(collection="case-studies", record_id=<id>, status="published", dry_run=true)
+updateCollectionRecord(collection="case-studies", record_id=<id>, status="published", confirm_token="cft_...")
+
+# 4. Expose it, then render with a kind="dynamic" component (source_id = the collection slug)
+updateCollection(slug="case-studies", is_public=true)
+# → records live at /case-studies/acme; the full list reads at
+#   GET /api/v1/content/data-sources/case-studies/items
+```
+
+**Records link to each other** (or to `posts`/`authors`) with simple relationship fields; a `depth` knob hydrates one level, batched (no N+1). **Gotchas:** slugs use hyphens not underscores (`case-studies`); unknown `data` fields are **rejected (422)**, not dropped; **reads use the record slug, writes use the record id**; publishing ≠ deploying; collection/record creates enforce your plan's `max_collections` / `max_records` caps (403). Render with **[skills/recipes/build-a-dynamic-component/](./skills/recipes/build-a-dynamic-component/SKILL.md)**. Full recipe: **[skills/recipes/define-a-custom-collection/](./skills/recipes/define-a-custom-collection/SKILL.md)** · Docs: https://publish.spideriq.ai/docs/ai-agents/custom-collections.
+
 ### Dynamic Landing Pages
 URL: `/lp/{page_slug}/{google_place_id}` or `/lp/{page_slug}/{salesperson}/{google_place_id}`
 
@@ -1261,6 +1289,73 @@ POST /api/v1/dashboard/projects/{pid}/content/components
 ```
 
 Off by default — the explicit-over-magical contract for hand-authored components stays. Runnable example: [examples/tilda-migrate-css.sh](examples/tilda-migrate-css.sh) · Full recipe: [skills/recipes/tilda-migration/](skills/recipes/tilda-migration/).
+
+---
+
+## Folder-driven navigation + folder landing pages (July 2026)
+
+A navigation item can be **bound to a page folder** instead of carrying a hand-typed `url`. The bound item is expanded server-side into the folder's **published, non-folder** descendants in `sort_order` — so the menu tracks the page tree instead of drifting from it, and a draft page can never appear in a public menu.
+
+### Three item modes
+
+Each item in a menu is independently one of three modes; they mix freely in the same menu.
+
+| Mode | Shape | Behaviour |
+|---|---|---|
+| Hand-authored | `{ "label": "Pricing", "url": "/pricing" }` | The original behaviour, still the default. Unchanged. |
+| Folder-bound | `{ "label": "Handbook", "source": { "kind": "folder", "folder_id": "<uuid>", "depth": 2 } }` | Expands to that folder's published pages. |
+| Site-bound | `{ "label": "Explore", "source": { "kind": "site", "depth": 2 } }` | Expands from the top-level page tree. |
+
+`depth` is 1–3 and counts levels **below** the bound root. `folder_id` is required when `kind` is `folder`.
+
+### ⚠️ The read returns the BINDING, not its expansion
+
+This is the one part agents get wrong.
+
+- `content_get_navigation` (the authenticated read) returns bound items with `source` set and `children` **empty**. That is correct.
+- The public site read is the one that expands. What a visitor sees is generated per request.
+
+If you read the live site, notice the authenticated response looks "empty", and write the expanded pages back as `children` — you have replaced the rule with a snapshot of today's page tree, and the menu **permanently stops tracking pages**. Edit `source`; never write the expansion back.
+
+### Creating and filling a folder
+
+A folder is a page row with `is_folder: true`. It is dashboard-only: it has no URL, never renders on the live site, and cannot be published (publishing one is refused deliberately).
+
+```
+content_create_page   { "title": "Handbook", "slug": "handbook", "is_folder": true }
+content_update_page   { "page_id": "<child>",  "parent_id": "<folder-id>" }    # move a page in (null moves it out)
+content_update_page   { "page_id": "<folder>", "index_page_id": "<child>" }    # pin a landing page (null clears)
+content_list_pages    → returns is_folder + parent_id — this is how you discover the folder_id to bind
+```
+
+`parent_id` and `index_page_id` are forwarded when **present**, so an explicit `null` is meaningful and is how you detach a page or clear an override.
+
+### The folder's landing page
+
+A bound folder node needs somewhere to point. Resolution is **position-first, override-optional**:
+
+1. `index_page_id` when set, published, and still a direct child of that folder;
+2. otherwise the first published child by `sort_order`;
+3. otherwise **no `url` at all** — render the node label-only, never `href=""`.
+
+Step 1 is re-checked on every read, which is what makes the override self-healing: delete or unpublish the pinned page and the folder silently falls back to step 2 rather than pointing at nothing.
+
+### `folder.children` — rendering a real index page
+
+When a page **is** its folder's resolved landing page, its response carries a `folder` object and the renderer lifts it to the top of the Liquid scope. Use it to build an index instead of hand-listing links:
+
+```liquid
+{% if folder %}
+  <h2>{{ folder.title }}</h2>
+  {% for child in folder.children %}
+    <a href="{{ child.url }}">{{ child.title }} — {{ child.seo_description }}</a>
+  {% endfor %}
+{% endif %}
+```
+
+`folder` is **absent** on ordinary pages — the key's presence is the signal, so guard with `{% if folder %}` and the same template stays safe everywhere. It is also reachable inside a component, because the component scope inherits the page scope.
+
+CLI equivalents: `npx @spideriq/cli content navigation get [location]` and `... navigation set <location> --items <json>|--file <path>`. The output of `get` pipes straight back into `set`.
 
 ---
 
