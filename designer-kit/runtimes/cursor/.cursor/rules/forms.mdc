@@ -1,5 +1,5 @@
 ---
-description: "Full form_* MCP namespace (20 tools): Typeform-class multi-step forms, lead capture, NPS / CSAT surveys, intake forms. Reuses booking_flows table with kind='form'. 15+ field types, conditional logic with variables + hidden fields, structural validation, embed snippet generation via the embed.spideriq.ai/v1/loader.js loader (3 KB, inline + popup). NOT in @spideriq/mcp-publish — only in kitchen-sink @spideriq/mcp@1.13.0. Use whenever the user asks for 'a form', 'survey', 'questionnaire', 'NPS', 'lead capture', 'intake form', 'Typeform alternative'."
+description: "Full form_* MCP namespace (20 tools): Typeform-class multi-step forms, lead capture, NPS / CSAT surveys, intake forms. Reuses booking_flows table with kind='form'. 25 field types, conditional logic with variables + hidden fields, structural validation, embed snippet generation via the embed.spideriq.ai/v1/loader.js loader (3 KB, inline + popup). NOT in @spideriq/mcp-publish — only in kitchen-sink @spideriq/mcp@1.13.0. Use whenever the user asks for 'a form', 'survey', 'questionnaire', 'NPS', 'lead capture', 'intake form', 'Typeform alternative'."
 alwaysApply: false
 ---
 # forms

@@ -14,7 +14,7 @@ version: "1.0.0"
 description: >
   Build and manage SpiderFlow forms — multi-step wizards, lead capture,
   NPS / CSAT surveys. Discriminator-based on the booking_flows table
-  (kind='form'). 15+ field types, conditional logic with variables +
+  (kind='form'). 25 field types, conditional logic with variables +
   hidden fields, structural validation, embed snippet generation.
   Customers fill via the SpiderFlow embed loader
   (embed.spideriq.ai/v1/loader.js, inline or popup) or the standalone
