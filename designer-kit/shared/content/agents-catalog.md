@@ -454,9 +454,9 @@ Typeform-class multi-step forms — lead capture, NPS / CSAT surveys, intake for
 ```
 form_create(name="Free trial signup", business_id="<uuid>", fields=[
   {id:"q1", type:"email", label:"Your work email", required:true},
-  {id:"q2", type:"short_text", label:"Company name", required:true}
+  {id:"q2", type:"text", label:"Company name", required:true}
 ])                                                                  → flow_id
-form_add_field(flow_id, field={id:"q3", type:"dropdown", label:"Team size",
+form_add_field(flow_id, field={id:"q3", type:"select", label:"Team size",
   options:[{label:"1-10", value:"small"}, {label:"11-50", value:"medium"}, {label:"51+", value:"large"}]})
 form_add_logic_rule(flow_id, rule={
   when:{field_id:"q3", op:"equals", value:"large"},
@@ -477,7 +477,7 @@ Embed on any third-party page (Webflow / Shopify / WordPress / plain HTML):
 <script async src="https://embed.spideriq.ai/v1/loader.js"></script>
 ```
 
-15+ field types: `short_text` / `long_text` / `email` / `phone` / `number` / `dropdown` / `checkbox` / `picture_choice` / `rating` / `nps` / `opinion_scale` / `date` / `file_upload` / `statement` / `yes_no`. Picture-choice options carry `image_url`; file-upload requires `accept[]`; opinion-scale `steps` in 5-11 range; rating requires `shape`.
+25 field types: `text` / `textarea` / `email` / `phone` / `tel` / `number` / `select` / `checkbox` / `consent` / `date` / `time` / `rating` / `nps` / `opinion_scale` / `picture_choice` / `file_upload` / `statement` / `url` / `country` / `region` / `postal_code` / `address` / `datetime` / `currency` / `place`. The last eight are IDAP-anchored and emit structured, typed values. Picture-choice options carry `image_url`; file-upload requires `accept[]`; opinion-scale `steps` in 5-11 range; rating requires `shape`.
 
 Conditional logic: `form_add_logic_rule` (jump-to / show / hide / set-variable / end-flow), `form_declare_variable` (string / number / boolean with type-checked defaults), `form_add_hidden_field` (URL-param capture: utm_source, ref, etc).
 

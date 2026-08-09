@@ -225,9 +225,10 @@ methods:
         description: >
           A single FormField object: { id, type, label, required?,
           options?, accept?, shape?, steps?, ... }. Type is one of
-          short_text | long_text | email | phone | number | dropdown |
-          checkbox | picture_choice | rating | nps | opinion_scale | date
-          | file_upload | statement | yes_no.
+          text | textarea | email | phone | tel | number | select |
+          checkbox | consent | date | time | rating | nps | opinion_scale |
+          picture_choice | file_upload | statement | url | country | region |
+          postal_code | address | datetime | currency | place.
       position:
         type: integer
         required: false
