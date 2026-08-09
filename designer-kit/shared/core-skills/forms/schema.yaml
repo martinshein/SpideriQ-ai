@@ -14,7 +14,7 @@ version: "1.0.0"
 description: >
   Build and manage SpiderFlow forms — multi-step wizards, lead capture,
   NPS / CSAT surveys. Discriminator-based on the booking_flows table
-  (kind='form'). 15+ field types, conditional logic with variables +
+  (kind='form'). 25 field types, conditional logic with variables +
   hidden fields, structural validation, embed snippet generation.
   Customers fill via the SpiderFlow embed loader
   (embed.spideriq.ai/v1/loader.js, inline or popup) or the standalone
@@ -225,9 +225,10 @@ methods:
         description: >
           A single FormField object: { id, type, label, required?,
           options?, accept?, shape?, steps?, ... }. Type is one of
-          short_text | long_text | email | phone | number | dropdown |
-          checkbox | picture_choice | rating | nps | opinion_scale | date
-          | file_upload | statement | yes_no.
+          text | textarea | email | phone | tel | number | select |
+          checkbox | consent | date | time | rating | nps | opinion_scale |
+          picture_choice | file_upload | statement | url | country | region |
+          postal_code | address | datetime | currency | place.
       position:
         type: integer
         required: false

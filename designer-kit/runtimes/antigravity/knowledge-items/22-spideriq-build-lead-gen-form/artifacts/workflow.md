@@ -25,7 +25,7 @@ See [core-skills/forms/SKILL.md → MCP package caveat](../../core-skills/forms/
 ```
 1. form_create        — name + initial fields + theme         → flow_id
 2. form_add_field     — append the "contact method" picker
-3. form_add_field     — append a long_text "anything else?"
+3. form_add_field     — append a textarea "anything else?"
 4. form_validate      — local structural check (no API call)
 5. form_publish       — draft → active (2-phase confirm)
 6. form_get_embed_snippet — copy-paste HTML for any page
