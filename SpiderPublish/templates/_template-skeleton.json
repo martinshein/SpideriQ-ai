@@ -1,0 +1,128 @@
+{
+  "_description": "Site template manifest skeleton. Copy this to templates/<your-slug>/template.json and fill it in. See CONTRIBUTING-TEMPLATES.md for the full flow.",
+  "_docs": "https://github.com/martinshein/SpideriQ-ai/tree/main/SpiderPublish/CONTRIBUTING-TEMPLATES.md",
+
+  "slug": "saas-developer-tool",
+  "name": "SaaS — Developer Tool",
+  "description": "One-line description shown on the gallery card. ~80 chars.",
+
+  "industry": "saas",
+  "use_case": "marketing",
+  "tags": ["dev-tool", "open-core", "freemium"],
+  "is_featured": false,
+
+  "_industry_options": "saas | agency | restaurant | ecommerce | portfolio | local-service | blog | event | landing",
+  "_use_case_options": "marketing | docs | blog | directory | personal",
+
+  "pages": [
+    {
+      "slug": "home",
+      "title": "Home",
+      "seo_title": "Acme — Ship developer tools faster",
+      "seo_description": "Real-ish 150-char SEO description. Not lorem ipsum. Replace with copy that fits the persona in your brief.",
+      "blocks": [
+        {
+          "type": "component",
+          "component_slug": "hero-headline",
+          "props": {
+            "headline": "Ship developer tools faster",
+            "subheadline": "The fastest way to go from idea to production for tools your team actually uses.",
+            "cta_text": "Start free",
+            "cta_path": "/signup",
+            "secondary_cta_text": "View pricing",
+            "secondary_cta_path": "/pricing",
+            "eyebrow": "v2.0 — now with multi-region edge"
+          }
+        },
+        {
+          "type": "component",
+          "component_slug": "features-3col",
+          "props": {
+            "section_title": "Built for developers",
+            "section_subtitle": "Every primitive you need, nothing you don't.",
+            "features": [
+              { "icon": "zap", "heading": "Edge-deployed", "body": "Sub-50ms response times from 250+ POPs worldwide." },
+              { "icon": "shield-check", "heading": "Type-safe", "body": "End-to-end TypeScript. Catch breakage before it ships." },
+              { "icon": "git-branch", "heading": "Preview deploys", "body": "Every PR gets a live URL. Review with eyes, not screenshots." }
+            ]
+          }
+        },
+        {
+          "type": "component",
+          "component_slug": "pricing-3tier",
+          "props": {
+            "section_title": "Simple, transparent pricing",
+            "section_subtitle": "Start free. Pay when you scale.",
+            "tiers": [
+              {
+                "name": "Hobby",
+                "price": "$0",
+                "period": "forever",
+                "features": ["1 project", "Community support", "Basic analytics"],
+                "cta_text": "Start free",
+                "cta_path": "/signup"
+              },
+              {
+                "name": "Pro",
+                "price": "$29",
+                "period": "/month",
+                "features": ["10 projects", "Priority support", "Advanced analytics", "Custom domains"],
+                "cta_text": "Start trial",
+                "cta_path": "/signup?plan=pro",
+                "highlighted": true
+              },
+              {
+                "name": "Team",
+                "price": "$99",
+                "period": "/month",
+                "features": ["Unlimited projects", "SAML SSO", "Dedicated support", "Audit logs"],
+                "cta_text": "Contact sales",
+                "cta_path": "/contact"
+              }
+            ]
+          }
+        },
+        {
+          "type": "component",
+          "component_slug": "cta-banner",
+          "props": {
+            "headline": "Stop fighting your dev tools.",
+            "body": "Ship better software, faster. Your team will thank you.",
+            "cta_text": "Get started free",
+            "cta_path": "/signup"
+          }
+        }
+      ]
+    }
+  ],
+
+  "navigation": {
+    "header": [
+      { "label": "Pricing", "path": "/pricing" },
+      { "label": "Docs", "path": "/docs" },
+      { "label": "Blog", "path": "/blog" }
+    ],
+    "footer": [
+      { "label": "Privacy", "path": "/privacy" },
+      { "label": "Terms", "path": "/terms" },
+      { "label": "Contact", "path": "/contact" }
+    ]
+  },
+
+  "settings": {
+    "primary_color": "#0A0A0A",
+    "body_text_color": "#1F1F23",
+    "heading_color": "#0A0A0A",
+    "site_tagline": "Ship developer tools faster"
+  },
+
+  "_settings_keys_allowed": [
+    "site_name", "site_tagline", "favicon_url",
+    "primary_color", "surface_color", "surface_elevated_color", "subtle_color",
+    "body_text_color", "heading_color",
+    "logo_dark_url", "logo_light_url",
+    "copyright_text", "social_links",
+    "google_analytics_id", "plausible_domain",
+    "default_og_image_url", "default_seo_title_suffix"
+  ]
+}
