@@ -2,6 +2,31 @@
 
 Things that cause silent failures or broken deploys. Read before building.
 
+## Jul 2026 — A create call can return 200 and still not have stored everything you sent — re-read the row (2026-07-22)
+
+A `200` on a create means "the request was accepted", not "every field you sent was saved". A field
+can be accepted by the request schema, be perfectly valid, and still not reach storage — and when
+that happens there is **no error, no warning, and nothing in the response to notice**. The keys are
+simply absent from the object you get back, which reads like a slim response rather than data loss.
+
+This bit a real project: pages created in one shot came back with no canonical URL, no social-card
+fields and no `robots` directive, and it went unnoticed until someone diffed a page against what
+they'd sent. It has been fixed for pages and posts, and there is now a build-time check that fails
+if any create field stops being saved — but the habit is the durable protection, not the fix.
+
+- **After creating something whose fields matter, read it back and compare.** One extra call:
+  `content_get_page(page_id)` (or the post / doc equivalent) and diff the fields you care about
+  against what you sent. Do this for SEO fields, structured data, and anything with legal or
+  indexing consequences.
+- **`robots` is the sharp one.** A create-time `noindex,nofollow` that fails to save doesn't fail
+  loudly — it fails *open*, publishing an indexable page. If a page must stay out of search, verify
+  `robots` on the stored row before you deploy, not just in your request.
+- **If a field saves on update but not on create, that asymmetry IS the diagnosis.** It rules out
+  auth, payload shape, validation and your client library in one step — all of those would fail
+  both. Report it that way and it can be traced to one function.
+- **Reliable workaround, when you don't want to wait for a fix:** create, then immediately update
+  with the fields that matter. An update path that already works is the cheapest guarantee.
+
 ## Jun 2026 — A members login form must be SAME-HOST as the gated pages (Site Members, 2026-06-13)
 
 The member session cookie is **host-only** — it is set on the site's own domain. So the Authentication brick that signs members in (`auth_target="site_members"`) must live on the **same site** as the pages it unlocks. A login form on a different host (a separate `members_base`, an apex domain, a shared login site) **silently fails to log the visitor in** — sign-in appears to succeed but no usable session cookie lands on the gated domain.
