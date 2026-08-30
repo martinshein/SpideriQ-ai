@@ -257,7 +257,7 @@ https://yoursite.com
 | **IDAP data access** | Read your CRM data (businesses, emails, contacts, phones) |
 | **Multi-tenant** | Each client gets isolated content, custom domain, own Worker |
 | **Preview URLs** | `preview-{hash}.sites.spideriq.ai` serves the staging snapshot before you flip production |
-| **Token-efficient** | `?format=yaml` saves 40-76% tokens vs JSON |
+| **Token-efficient** | `?format=yaml` saves 40-76% tokens vs JSON. Every read endpoint also takes `json`, `md` and `llm` |
 | **Edge deployment** | Deploy to Cloudflare Workers in 2-5 seconds |
 
 ## Supported IDEs

@@ -298,6 +298,7 @@ Files up to 500 MB are accepted (raised from 10 MB on 2026-04-30). The CLI's `bg
 | Gotcha | What Happens | Fix |
 |--------|-------------|-----|
 | Forgetting `?format=yaml` | JSON responses waste 40-76% more tokens | Set `SPIDERIQ_FORMAT=yaml` in `.mcp.json` env |
+| Assuming `format` only takes `yaml` and `md` | You miss `llm`, which returns the JSON body plus a `guidance` block saying what to call next | Every read endpoint takes `json` (default), `yaml`, `md` and `llm`. Bearer/PAT callers get guidance by default; `?format=json` opts out |
 | Using wrong auth for public vs dashboard endpoints | 401 or wrong data | Public `/content/*` uses `X-Content-Domain`, dashboard uses Bearer |
 | Not checking deploy readiness | Deploying a half-configured site | `content_deploy_readiness` before deploy-preview |
 | Hitting `/api/v1/dashboard/content/...` from a bound directory | Works but carries Deprecation headers | The CLI/MCP auto-rewrites to scoped URLs — only raw `curl` skips the rewrite |
