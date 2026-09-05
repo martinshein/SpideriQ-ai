@@ -2,7 +2,7 @@
   "title": "Build a Scroll-Linked Hero from a Video",
   "summary": "Build a cinematic scroll-scrubbed hero from a video file using ffmpeg frame extraction and the sys-scroll-sequence component. Use whenever the user asks for 'cinematic scroll', 'scroll-linked hero', 'video as background animation', 'frame-by-frame hero', 'scroll-driven animation', 'Apple-style scroll hero'.",
   "createdAt": "2026-05-08T00:00:00Z",
-  "updatedAt": "2026-06-13T15:42:21Z",
+  "updatedAt": "2026-09-05T00:00:00Z",
   "references": [
     "shared/recipes/scroll-sequence/"
   ]

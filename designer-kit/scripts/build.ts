@@ -43,6 +43,11 @@ const SkillSchema = z.object({
 const ManifestSchema = z.object({
   version: z.string(),
   description: z.string(),
+  // Stamped onto every emitted artifact. MUST be a fixed date, never a build
+  // clock: runtimes/ is committed and `build:check` compares it byte-for-byte
+  // against a fresh build, so any wall-clock value makes the gate unpassable.
+  // Bump it in the same commit that changes shared/.
+  updated_at: z.string().regex(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/),
   runtimes: z.array(RuntimeSchema).length(4),
   skills: z.array(SkillSchema).min(1),
 });
@@ -126,7 +131,7 @@ const emitClaudeSkill = (rt: Runtime, s: Skill): void => {
   }
 };
 
-const emitAntigravityKi = (rt: Runtime, s: Skill): void => {
+const emitAntigravityKi = (rt: Runtime, s: Skill, updatedAt: string): void => {
   const idx = String(s.ki_index).padStart(2, "0");
   const kiDir = path.join(runtimesDir, rt.id, "knowledge-items", `${idx}-spideriq-${s.id}`);
   // metadata.json
@@ -134,7 +139,7 @@ const emitAntigravityKi = (rt: Runtime, s: Skill): void => {
     title: s.title,
     summary: s.summary,
     createdAt: "2026-05-08T00:00:00Z",
-    updatedAt: new Date().toISOString().replace(/\.\d{3}Z$/, "Z"),
+    updatedAt,
     references: [
       `shared/${s.kind === "recipe" ? "recipes" : s.kind === "core" ? "core-skills" : "guides"}/${s.id}/`,
     ],
@@ -394,7 +399,7 @@ const main = (): void => {
       for (const s of manifest.skills) emitClaudeSkill(rt, s);
       log(`  ✓ ${manifest.skills.length} skills as .claude/skills/`);
     } else if (rt.skill_format === "antigravity-ki") {
-      for (const s of manifest.skills) emitAntigravityKi(rt, s);
+      for (const s of manifest.skills) emitAntigravityKi(rt, s, manifest.updated_at);
       writeAntigravityInstaller();
       log(`  ✓ ${manifest.skills.length} Knowledge Items + install-knowledge-items.sh`);
     } else if (rt.skill_format === "cursor-rule") {
