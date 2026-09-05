@@ -10,7 +10,8 @@ Two concepts, three URLs:
 
 - **Category** (e.g. `plumbers`) — a vertical with SEO templates
 - **Listing** — an individual business inside a category, tagged with `{city, state, country, ...}`
-- URLs: `/directory/{category}` → cities list · `/directory/{category}/{city}` → listings · `/directory/{category}/{city}/{listing}` → detail
+- URLs: `/{directory_base}/{category}` → cities list · `/{directory_base}/{category}/{city}` → listings · `/{directory_base}/{category}/{city}/{listing}` → detail
+- `{directory_base}` defaults to `directory` and is **renamable per site** (see *Renaming the prefix* below), so do not hard-code `/directory/`
 
 ## The one-shot path (v2.89.0+)
 
@@ -42,6 +43,24 @@ directory_bulk_upsert_listings(
 ```
 
 Returns `{upserted: N, failed: 0, affected_cities: ["miami-beach-florida", ...]}`. No publish step (listings default to `status: "published"`). No deploy step — the public `/directory/*` routes render live.
+
+### Import from the site's own business data — one call
+
+If the account has run SpiderMaps, SpiderSite, SpiderCompanyData or SpiderPeople, the businesses are already stored and you do not need a file at all:
+
+```
+directory_import_from_idap(
+  category_slug   = "plumbers",
+  category_filter = "Plumber",     # matches the business's own category list
+  country_code    = "US",          # ISO-2, uppercase, exact
+  city            = "Miami",       # substring match
+  rating_min      = 4.0,           # inclusive
+  limit           = 5000,          # hard cap 5000
+  prune           = False          # see Staleness
+)
+```
+
+It reads the store directly — no export step, no sync pipeline — and carries every column the data declares: into a typed column where one exists, otherwise into the listing's `data` object. Read `fields_mapped` in the response to see what landed.
 
 ### CLI
 
@@ -127,11 +146,56 @@ directory_bulk_upsert_listings(
 )
 ```
 
-### Merge tags inside listings
+### Merge tags do NOT work on directory pages
 
-Listings use the same merge-tag pipeline as dynamic landing pages. If you store `{{ salesperson_email }}` in a listing's custom field and render a bespoke detail template, the same `{{ ... }}` resolution rules apply.
+`{{ first_name }}`, `{{ company_name }}` and the rest are **lead-scoped to `/lp/` only**. They are built from a lead resolved by the `/lp/{page}/{identifier}` routes, and on every other route — directory pages included — they resolve to the canonical empty shape.
+
+They do not error. They render as empty strings, silently, at HTTP 200. Use `listing.*` for the typed columns and `data.*` for whatever you stored in the listing's `data` object.
+
+## Staleness — the one that bites
+
+**Both import paths are an UPSERT and neither removes anything.** A business deleted from the source, or renamed so it derives a different slug, leaves its old listing published forever, and every re-import drifts the category further from its source. Nothing errors.
+
+The fix is `prune`, and it is **off by default**:
+
+```
+directory_import_from_idap(category_slug = "plumbers", ..., prune = True)
+```
+
+`prune` **archives** (`status: "archived"` — never deletes, and reversible with `directory_upsert_listing`) every listing this import's own result set did not produce.
+
+It refuses rather than guess, and names the refusal in `prune_skipped_reason`:
+
+| reason | why refusing is correct |
+|---|---|
+| `source_returned_no_rows` | an empty result is far more often a filter that matched nothing than a category that genuinely emptied. Pruning there would archive everything. |
+| `source_truncated_at_limit` | the read hit `limit`, so "absent from this page" is a pagination artefact, not a deletion. Raise `limit` or narrow the filter. |
+
+A refusal is an **answer**, not a transient error: re-running unchanged refuses identically. Change the inputs.
+
+There is no scheduler. Re-running the import is a decision someone makes.
+
+## Renaming the prefix
+
+`directory_base` defaults to `directory` and is a per-site setting:
+
+```
+template_update_config(directory_base = "ls")   →  /ls/plumbers/miami-florida/aqua-fix
+```
+
+The old `/directory/...` URLs keep serving as permanent **301** redirects and `sitemap.xml` switches to advertising only the new prefix. It is rejected if malformed, if it collides with a reserved namespace (`blog`, `docs`, `changelog`, `press`, `newsroom`, `f`, `lp`, `api`), or if it collides with an existing page slug.
+
+🔴 **The rename is not atomic — do it and deploy in one operation.** The prefix is read from two places at different speeds: the API and `sitemap.xml` read a database column and move immediately, while the renderer reads a deploy-time config and only moves when you deploy. In the gap, the sitemap advertises addresses the site does not serve yet. Never rename while deploys are failing.
+
+⚠️ Verifying a rename has its own trap: directory routes are cached for 60 seconds, so a path you probed *before* the rename returns its cached not-found afterwards. Wait out the TTL before believing it.
 
 ## Common variants
+
+### Two things that make a directory quietly wrong
+
+**An inconsistent `state` splits one city into two pages.** `city_slug` is derived server-side from each listing's city **and state**, so `New York` stored once as `NY` and once as `New York` produces both `new-york-ny` and `new-york-new-york` — two live pages competing for one city. Canonicalise `state` **before** importing; merging two slugs afterwards changes live URLs.
+
+**A listing with an empty `city` appears on no city page at all.** It produces no city rollup, so the hub never lists it, yet it is still returned by `directory_list_listings` and still reachable at its own URL. Audit with `directory_list_listings` and compare against the hub, never the other way round — absence of a page is not absence of a listing.
 
 ### Bulk import from a file (CLI)
 
