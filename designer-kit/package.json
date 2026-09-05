@@ -5,7 +5,7 @@
   "description": "SpiderPublish Starter Kit build pipeline — emits per-runtime trees from shared/ source.",
   "scripts": {
     "build": "tsx scripts/build.ts",
-    "build:check": "tsx scripts/build.ts && git diff --quiet runtimes/ || (echo 'BUILD DRIFT — runtimes/ differs from committed state'; exit 1)"
+    "build:check": "tsx scripts/build.ts && sh scripts/check-drift.sh"
   },
   "devDependencies": {
     "tsx": "4.20.6",

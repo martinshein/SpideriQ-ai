@@ -190,15 +190,32 @@ SpiderPublish/
 # 1. Edit canonical content
 $EDITOR shared/recipes/scroll-sequence/SKILL.md
 $EDITOR shared/content/agents-catalog.md
-$EDITOR manifest.json   # if adding a new skill or runtime
+$EDITOR manifest.json   # bump `updated_at`; also if adding a new skill or runtime
 
 # 2. Regenerate runtimes
 npm run build
 
-# 3. Commit (degit pulls from `runtimes/` so the trees must be checked in)
+# 3. Verify the committed trees match the source
+npm run build:check
+
+# 4. Commit (degit pulls from `runtimes/` so the trees must be checked in)
 git add shared/ runtimes/ manifest.json
 git commit -m "feat(scroll-sequence): clarify GSAP fallback path"
 ```
+
+`npm run build:check` rebuilds and then fails if `runtimes/` differs from what
+is committed. It is the gate that catches a `shared/` edit shipped without a
+regeneration — which is how the personalized-landing guide lost 49 lines
+between #59 and #61.
+
+Two rules keep it usable:
+
+- **Never hand-edit a file under `runtimes/`.** A hand-patched generated file
+  passes the check once and diverges on the next source change.
+- **Nothing emitted may vary between two builds of the same source** — no
+  timestamps, no hostnames, no random ids. `updatedAt` is stamped from
+  `manifest.json`'s `updated_at` for exactly this reason; a build clock there
+  made the gate impossible to pass.
 
 ## Where to Start
 

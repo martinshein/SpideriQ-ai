@@ -2,6 +2,7 @@
   "$schema": "./scripts/manifest.schema.json",
   "version": "1.0.0",
   "description": "SpiderPublish Starter Kit — runtime + skill registry. shared/ is the source of truth; runtimes/ is emitted by scripts/build.ts.",
+  "updated_at": "2026-09-05T00:00:00Z",
   "runtimes": [
     {
       "id": "claude-code",

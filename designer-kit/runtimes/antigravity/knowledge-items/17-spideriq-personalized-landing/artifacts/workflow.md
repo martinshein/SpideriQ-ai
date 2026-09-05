@@ -34,6 +34,55 @@ content_create_page({
 
 The `template: "dynamic_landing"` is what activates the `/lp/{slug}/{place_id}` URL pattern. Other templates serve a single static page at `/{slug}`.
 
+
+## Step 2b: pick the identifier key you actually hold
+
+The identifier at the end of a `/lp/` link is read as a Google place ID by default. If your list
+carries something else, name the key with `?resolve_key=`:
+
+```
+/lp/{page-slug}/acme-plumbing.de?resolve_key=domain
+/lp/{page-slug}/{rep}/DE123456789?resolve_key=vat
+```
+
+Ten keys resolve a business:
+
+| Source | Keys |
+|---|---|
+| Maps / crawl | `place_id` (default), `domain` |
+| VayaPin | `pin_name`, `pin_data_set_id`, `account_id`, `pin_subscription_id` |
+| Company registry | `vat`, `lei`, `tax_id`, `registration_number` |
+
+`email` is still accepted for backwards compatibility but does **not** identify a business — it
+always returns 404. Use `domain`.
+
+## Step 2c: decide what an unidentified visitor sees
+
+Personalised links get forwarded and go stale. When the identifier does not resolve, `lead` is
+null and the page still renders — the renderer runs with strict variables off, so `{{ lead.name }}`
+comes out empty rather than throwing.
+
+Set a fallback so an anonymous visit still reads like a finished page:
+
+```json
+{ "custom_fields": { "demo_business": "your business", "demo_city": "your city" } }
+```
+
+Without one the shipped template falls back to the words "Your Business".
+
+**If you write a custom `dynamic_landing` template:** guard the blocks that need real data with
+`{% if lead %}…{% endif %}` and leave your hero, blocks and CTA outside the guard. An unguarded
+nested `lead.*` dereference is the one thing that turns a missing lead into a 500.
+
+## Step 2d: rep-branded links (optional)
+
+A second URL segment names a salesperson configured on the site, and the page gains their name,
+title, photo and booking link:
+
+```
+/lp/{page-slug}/{salesperson-slug}/{identifier}
+```
+
 ## Step 3: verify resolve_lead works for a sample place_id
 
 Before publishing, sanity-check the lead lookup:

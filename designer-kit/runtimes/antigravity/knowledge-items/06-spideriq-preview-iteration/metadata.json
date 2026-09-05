@@ -2,7 +2,7 @@
   "title": "Safe Edit Loop with Preview → Confirm",
   "summary": "Iterate on a page or template safely: template_preview (no state mutation) → browser-check → publish (dry_run → confirm_token). The default safe authoring loop.",
   "createdAt": "2026-05-08T00:00:00Z",
-  "updatedAt": "2026-06-13T15:42:21Z",
+  "updatedAt": "2026-09-05T00:00:00Z",
   "references": [
     "shared/recipes/preview-iteration/"
   ]
